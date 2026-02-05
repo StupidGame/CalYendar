@@ -17,11 +17,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.outlined.Flag
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,7 +30,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -46,41 +44,37 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.stupidgame.curyendar.data.CuryendarItem
+import io.github.stupidgame.curyendar.data.CuryendarDao
+import io.github.stupidgame.curyendar.data.DetailUiState
 import io.github.stupidgame.curyendar.data.DetailViewModel
 import io.github.stupidgame.curyendar.data.DetailViewModelFactory
-import io.github.stupidgame.curyendar.data.Expense
-import io.github.stupidgame.curyendar.data.Goal
-import io.github.stupidgame.curyendar.data.Income
+import io.github.stupidgame.curyendar.data.Event
+import io.github.stupidgame.curyendar.data.Transaction
+import io.github.stupidgame.curyendar.data.TransactionType
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailScreen(year: Int, month: Int, day: Int) {
-    val context = LocalContext.current
-    val viewModel: DetailViewModel = viewModel(
-        factory = DetailViewModelFactory(
-            (context.applicationContext as CuryendarApplication).database.curyendarDao(),
-            year, month, day
-        )
-    )
-    val items by viewModel.items.collectAsState(initial = emptyList())
+fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
+    val uiState by viewModel.uiState.collectAsState(initial = DetailUiState())
 
     var showBottomSheet by remember { mutableStateOf(false) }
-    var showAddExpenseDialog by remember { mutableStateOf(false) }
-    var showAddGoalDialog by remember { mutableStateOf(false) }
-    var showAddIncomeDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
-    val balance = items.sumOf {
-        when (it) {
-            is Income -> it.amount
-            is Expense -> -it.amount
-            else -> 0.0
-        }
-    }
-    val goal = items.find { it is Goal } as? Goal
+    var showAddGoalDialog by remember { mutableStateOf(false) }
+    var showAddIncomeDialog by remember { mutableStateOf(false) }
+    var showAddExpenseDialog by remember { mutableStateOf(false) }
+    var showAddEventDialog by remember { mutableStateOf(false) }
+
+    var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
+    var editingEvent by remember { mutableStateOf<Event?>(null) }
 
     Scaffold(
         floatingActionButton = {
@@ -103,13 +97,29 @@ fun DetailScreen(year: Int, month: Int, day: Int) {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                SummaryCard(balance = balance, goal = goal)
+                SummaryCard(balance = uiState.balance, goal = uiState.goal)
             }
-            items(items) { item ->
-                when (item) {
-                    is Goal -> {}
-                    is Expense -> ExpenseCard(expense = item)
-                    is Income -> IncomeCard(income = item)
+
+            if (uiState.events.isNotEmpty()) {
+                item {
+                    Text("Events", style = MaterialTheme.typography.titleLarge)
+                }
+                items(uiState.events) { event ->
+                    EventCard(event = event) {
+                        editingEvent = event
+                    }
+                }
+            }
+
+            if (uiState.dailyTransactions.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Transactions", style = MaterialTheme.typography.titleLarge)
+                }
+                items(uiState.dailyTransactions) { transaction ->
+                    TransactionCard(transaction = transaction) {
+                        editingTransaction = transaction
+                    }
                 }
             }
         }
@@ -123,76 +133,185 @@ fun DetailScreen(year: Int, month: Int, day: Int) {
                     ListItem(
                         headlineContent = { Text("目標を編集") },
                         leadingContent = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            showAddGoalDialog = true
-                            showBottomSheet = false
-                        }
+                        modifier = Modifier.clickable { showAddGoalDialog = true; showBottomSheet = false }
                     )
                     ListItem(
                         headlineContent = { Text("収入を追加") },
                         leadingContent = { Icon(Icons.Filled.TrendingUp, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            showAddIncomeDialog = true
-                            showBottomSheet = false
-                        }
+                        modifier = Modifier.clickable { showAddIncomeDialog = true; showBottomSheet = false }
                     )
                     ListItem(
                         headlineContent = { Text("支出を追加") },
                         leadingContent = { Icon(Icons.Filled.TrendingDown, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            showAddExpenseDialog = true
-                            showBottomSheet = false
+                        modifier = Modifier.clickable { showAddExpenseDialog = true; showBottomSheet = false }
+                    )
+                    ListItem(
+                        headlineContent = { Text("イベントを追加") },
+                        leadingContent = { Icon(Icons.Filled.Event, contentDescription = null) },
+                        modifier = Modifier.clickable { showAddEventDialog = true; showBottomSheet = false }
+                    )
+                }
+            }
+        }
+
+        editingTransaction?.let {
+            when (it.type) {
+                TransactionType.GOAL -> {
+                    AddGoalDialog(
+                        goal = it,
+                        onDismiss = { editingTransaction = null },
+                        onConfirm = { name, amount ->
+                            viewModel.upsertTransaction(it.copy(name = name, amount = amount))
+                            editingTransaction = null
+                        }
+                    )
+                }
+                TransactionType.INCOME -> {
+                    AddTransactionDialog(
+                        transaction = it,
+                        type = it.type,
+                        onDismiss = { editingTransaction = null },
+                        onConfirm = { name, amount ->
+                            viewModel.upsertTransaction(it.copy(name = name, amount = amount))
+                            editingTransaction = null
+                        }
+                    )
+                }
+                TransactionType.EXPENSE -> {
+                    AddTransactionDialog(
+                        transaction = it,
+                        type = it.type,
+                        onDismiss = { editingTransaction = null },
+                        onConfirm = { name, amount ->
+                            viewModel.upsertTransaction(it.copy(name = name, amount = amount))
+                            editingTransaction = null
                         }
                     )
                 }
             }
         }
 
-        if (showAddExpenseDialog) {
-            AddExpenseDialog(onDismiss = { showAddExpenseDialog = false }) { description, amount ->
-                viewModel.insertExpense(description, amount)
-                showAddExpenseDialog = false
-            }
+        editingEvent?.let {
+            AddEventDialog(
+                event = it,
+                year = viewModel.year,
+                month = viewModel.month,
+                day = viewModel.day,
+                onDismiss = { editingEvent = null },
+                onConfirm = { title, startTime, endTime, notificationMinutes ->
+                    viewModel.upsertEvent(it.copy(title = title, startTime = startTime, endTime = endTime, notificationMinutesBefore = notificationMinutes))
+                    editingEvent = null
+                }
+            )
         }
+
         if (showAddGoalDialog) {
-            AddGoalDialog(onDismiss = { showAddGoalDialog = false }, goal = goal) { name, amount ->
-                viewModel.insertGoal(name, amount)
-                showAddGoalDialog = false
-            }
+            AddGoalDialog(
+                goal = null,
+                onDismiss = { showAddGoalDialog = false },
+                onConfirm = { name, amount ->
+                    viewModel.upsertTransaction(
+                        Transaction(
+                            id = uiState.goal?.id ?: 0,
+                            year = viewModel.year,
+                            month = viewModel.month,
+                            day = viewModel.day,
+                            type = TransactionType.GOAL,
+                            name = name,
+                            amount = amount
+                        )
+                    )
+                    showAddGoalDialog = false
+                }
+            )
         }
+
         if (showAddIncomeDialog) {
-            AddIncomeDialog(onDismiss = { showAddIncomeDialog = false }) { description, amount ->
-                viewModel.insertIncome(description, amount)
-                showAddIncomeDialog = false
-            }
+            AddTransactionDialog(
+                transaction = null,
+                type = TransactionType.INCOME,
+                onDismiss = { showAddIncomeDialog = false },
+                onConfirm = { name, amount ->
+                    viewModel.upsertTransaction(
+                        Transaction(
+                            year = viewModel.year,
+                            month = viewModel.month,
+                            day = viewModel.day,
+                            type = TransactionType.INCOME,
+                            name = name,
+                            amount = amount
+                        )
+                    )
+                    showAddIncomeDialog = false
+                }
+            )
+        }
+
+        if (showAddExpenseDialog) {
+            AddTransactionDialog(
+                transaction = null,
+                type = TransactionType.EXPENSE,
+                onDismiss = { showAddExpenseDialog = false },
+                onConfirm = { name, amount ->
+                    viewModel.upsertTransaction(
+                        Transaction(
+                            year = viewModel.year,
+                            month = viewModel.month,
+                            day = viewModel.day,
+                            type = TransactionType.EXPENSE,
+                            name = name,
+                            amount = amount
+                        )
+                    )
+                    showAddExpenseDialog = false
+                }
+            )
+        }
+
+        if (showAddEventDialog) {
+            AddEventDialog(
+                event = null,
+                year = viewModel.year,
+                month = viewModel.month,
+                day = viewModel.day,
+                onDismiss = { showAddEventDialog = false },
+                onConfirm = { title, startTime, endTime, notificationMinutes ->
+                    viewModel.upsertEvent(
+                        Event(
+                            year = viewModel.year,
+                            month = viewModel.month,
+                            day = viewModel.day,
+                            title = title,
+                            startTime = startTime,
+                            endTime = endTime,
+                            notificationMinutesBefore = notificationMinutes
+                        )
+                    )
+                    showAddEventDialog = false
+                }
+            )
         }
     }
 }
 
 @Composable
-fun SummaryCard(balance: Double, goal: Goal?) {
+fun SummaryCard(balance: Long, goal: Transaction?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = "現在の残高", style = MaterialTheme.typography.titleMedium)
-            val balanceColor by animateColorAsState(
-                targetValue = when {
-                    balance > 0 -> Color(0xFF2E7D32)
-                    balance < 0 -> Color(0xFFC62828)
-                    else -> Color.Gray
-                },
-                animationSpec = tween(500)
-            )
             Text(
-                text = "%,.0f".format(balance),
+                text = "%,d".format(balance),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = balanceColor
             )
             Spacer(modifier = Modifier.height(16.dp))
             if (goal != null) {
+                val percentage = if (goal.amount > 0) (balance.toFloat() / goal.amount.toFloat()) else if (balance >= goal.amount) 1f else 0f
+                val cardColor = if (percentage >= 1f) Color(0xFF66BB6A) else Color(0xFFEF5350)
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -202,16 +321,23 @@ fun SummaryCard(balance: Double, goal: Goal?) {
                     Text(text = goal.name, style = MaterialTheme.typography.titleMedium)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                val percentage = if (goal.amount > 0) (balance / goal.amount).toFloat() else 0f
                 LinearProgressIndicator(
                     progress = percentage.coerceIn(0f, 1f),
                     modifier = Modifier.fillMaxWidth(),
+                    color = cardColor
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(text = "達成率: %,.0f".format(percentage * 100) + "%")
-                    Text(text = "目標: %,.0f".format(goal.amount))
+                    Text(text = "達成率: %.0f".format(percentage * 100) + "%")
+                    Text(text = "目標: %,d".format(goal.amount))
                 }
+                val difference = balance - goal.amount
+                Text(
+                    text = if (difference >= 0) "目標達成！ (+%,d)".format(difference) else "目標まであと %,d".format(-difference),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (difference >= 0) Color(0xFF66BB6A) else Color.Gray
+                )
+
             } else {
                 Text(
                     text = "目標を設定して、お金を貯めよう！",
@@ -224,143 +350,95 @@ fun SummaryCard(balance: Double, goal: Goal?) {
 }
 
 @Composable
-fun ExpenseCard(expense: Expense) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+fun TransactionCard(transaction: Transaction, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        val (icon, color, sign) = when (transaction.type) {
+            TransactionType.INCOME -> Triple(Icons.Filled.TrendingUp, Color(0xFF2E7D32), "+")
+            TransactionType.EXPENSE -> Triple(Icons.Filled.TrendingDown, Color(0xFFC62828), "-")
+            TransactionType.GOAL -> Triple(Icons.Filled.Edit, MaterialTheme.colorScheme.primary, "")
+        }
+
         ListItem(
-            headlineContent = { Text(expense.description) },
-            leadingContent = { Icon(Icons.Filled.TrendingDown, contentDescription = null, tint = Color(0xFFC62828)) },
-            trailingContent = { Text("- %,.0f".format(expense.amount), color = Color(0xFFC62828), fontWeight = FontWeight.Bold) }
+            headlineContent = { Text(transaction.name) },
+            leadingContent = { Icon(icon, contentDescription = null, tint = color) },
+            trailingContent = { Text("$sign %,d".format(transaction.amount), color = color, fontWeight = FontWeight.Bold) }
         )
     }
 }
 
 @Composable
-fun IncomeCard(income: Income) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+fun EventCard(event: Event, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val startTime = timeFormat.format(Date(event.startTime))
+        val endTime = timeFormat.format(Date(event.endTime))
+
         ListItem(
-            headlineContent = { Text(income.description) },
-            leadingContent = { Icon(Icons.Filled.TrendingUp, contentDescription = null, tint = Color(0xFF2E7D32)) },
-            trailingContent = { Text("+ %,.0f".format(income.amount), color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold) }
+            headlineContent = { Text(event.title) },
+            supportingContent = { Text("$startTime - $endTime") }
         )
     }
 }
 
+@Preview
 @Composable
-fun AddExpenseDialog(onDismiss: () -> Unit, onAdd: (String, Double) -> Unit) {
-    var amount by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("支出を追加") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("内容") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("金額") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                amount.toDoubleOrNull()?.let { onAdd(description, it) }
-            }, enabled = amount.toDoubleOrNull() != null && description.isNotBlank()) {
-                Text("追加")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("キャンセル")
-            }
+fun DetailScreenPreview() {
+    val fakeDao = object : CuryendarDao {
+        override fun getTransactionsUpToDate(year: Int, month: Int, day: Int): Flow<List<Transaction>> {
+            return flowOf(listOf(
+                Transaction(1, 2024, 5, 1, TransactionType.INCOME, "給料", 100000),
+                Transaction(2, 2024, 5, 5, TransactionType.EXPENSE, "食費", 5000)
+            ))
         }
-    )
+
+        override fun getLatestGoalUpToDate(year: Int, month: Int, day: Int): Flow<Transaction?> {
+            return flowOf(Transaction(3, 2024, 5, 1, TransactionType.GOAL, "PS5", 50000))
+        }
+
+        override fun getEventsForDate(year: Int, month: Int, day: Int): Flow<List<Event>> {
+            return flowOf(listOf(
+                Event(1, 2024, 5, 17, "友達とランチ", Date().time, Date().time + 3600000, -1)
+            ))
+        }
+
+        override fun getTransactionsForDate(year: Int, month: Int, day: Int): Flow<List<Transaction>> {
+            return flowOf(listOf(
+                Transaction(4, 2024, 5, 17, TransactionType.EXPENSE, "ランチ代", 1500)
+            ))
+        }
+
+        override suspend fun upsertTransaction(transaction: Transaction) {}
+
+        override suspend fun upsertEvent(event: Event) {}
+
+        override fun getTransactionsUpTo(year: Int, month: Int): Flow<List<Transaction>> {
+            return flowOf(emptyList())
+        }
+
+        override fun getTransactionsForMonth(year: Int, month: Int): Flow<List<Transaction>> {
+            return flowOf(emptyList())
+        }
+
+        override fun getAllGoals(): Flow<List<Transaction>> {
+            return flowOf(emptyList())
+        }
+
+        override fun getEventsForMonth(year: Int, month: Int): Flow<List<Event>> {
+            return flowOf(emptyList())
+        }
+    }
+    val viewModel = DetailViewModel(fakeDao, 2024, 5, 17)
+    DetailScreen(year = 2024, month = 5, day = 17, viewModel = viewModel)
 }
 
 @Composable
-fun AddGoalDialog(onDismiss: () -> Unit, goal: Goal?, onAdd: (String, Double) -> Unit) {
-    var name by remember { mutableStateOf(goal?.name ?: "") }
-    var amount by remember { mutableStateOf(goal?.amount?.toString() ?: "") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("目標を編集") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("目標の名前") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("目標金額") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                amount.toDoubleOrNull()?.let { onAdd(name, it) }
-            }, enabled = amount.toDoubleOrNull() != null && name.isNotBlank()) {
-                Text("保存")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("キャンセル")
-            }
-        }
+fun RealDetailScreen(year: Int, month: Int, day: Int) {
+    val context = LocalContext.current
+    val viewModel: DetailViewModel = viewModel(
+        factory = DetailViewModelFactory(
+            (context.applicationContext as CuryendarApplication).database.curyendarDao(),
+            year, month, day
+        )
     )
-}
-
-@Composable
-fun AddIncomeDialog(onDismiss: () -> Unit, onAdd: (String, Double) -> Unit) {
-    var amount by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("収入を追加") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("詳細") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("収入額") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                amount.toDoubleOrNull()?.let { onAdd(description, it) }
-            }, enabled = amount.toDoubleOrNull() != null && description.isNotBlank()) {
-                Text("追加")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("キャンセル")
-            }
-        }
-    )
+    DetailScreen(year, month, day, viewModel)
 }

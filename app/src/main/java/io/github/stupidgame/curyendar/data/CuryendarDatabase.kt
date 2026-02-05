@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Goal::class, Expense::class, Income::class], version = 1, exportSchema = false)
+@Database(entities = [Transaction::class, Event::class], version = 2, exportSchema = false)
 abstract class CuryendarDatabase : RoomDatabase() {
     abstract fun curyendarDao(): CuryendarDao
 
@@ -19,7 +19,9 @@ abstract class CuryendarDatabase : RoomDatabase() {
                     context.applicationContext,
                     CuryendarDatabase::class.java,
                     "curyendar_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

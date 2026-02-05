@@ -3,35 +3,50 @@ package io.github.stupidgame.curyendar.data
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-class DetailViewModel(private val dao: CuryendarDao, private val year: Int, private val month: Int, private val day: Int) : ViewModel() {
+data class DetailUiState(
+    val balance: Long = 0,
+    val goal: Transaction? = null,
+    val dailyTransactions: List<Transaction> = emptyList(),
+    val events: List<Event> = emptyList()
+)
 
-    val items: Flow<List<CuryendarItem>> = combine(
-        dao.getGoalsForDate(year, month, day),
-        dao.getExpensesForDate(year, month, day),
-        dao.getIncomesForDate(year, month, day)
-    ) { goals, expenses, incomes ->
-        goals + expenses + incomes
+class DetailViewModel(private val dao: CuryendarDao, val year: Int, val month: Int, val day: Int) : ViewModel() {
+
+    val uiState: Flow<DetailUiState> = combine(
+        dao.getTransactionsUpToDate(year, month, day),
+        dao.getLatestGoalUpToDate(year, month, day),
+        dao.getEventsForDate(year, month, day),
+        dao.getTransactionsForDate(year, month, day)
+    ) { allTransactions, latestGoal, dailyEvents, dailyTransactions ->
+        val balance = allTransactions.sumOf {
+            when (it.type) {
+                TransactionType.INCOME -> it.amount
+                TransactionType.EXPENSE -> -it.amount
+                else -> 0L
+            }
+        }
+        DetailUiState(
+            balance = balance,
+            goal = latestGoal,
+            dailyTransactions = dailyTransactions,
+            events = dailyEvents
+        )
     }
 
-    fun insertGoal(name: String, amount: Double) {
-        viewModelScope.launch {
-            dao.insertGoal(Goal(name = name, amount = amount, year = year, month = month, day = day))
+    fun upsertTransaction(transaction: Transaction) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.upsertTransaction(transaction)
         }
     }
 
-    fun insertExpense(description: String, amount: Double) {
-        viewModelScope.launch {
-            dao.insertExpense(Expense(description = description, amount = amount, year = year, month = month, day = day))
-        }
-    }
-
-    fun insertIncome(description: String, amount: Double) {
-        viewModelScope.launch {
-            dao.insertIncome(Income(description = description, amount = amount, year = year, month = month, day = day))
+    fun upsertEvent(event: Event) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.upsertEvent(event)
         }
     }
 }

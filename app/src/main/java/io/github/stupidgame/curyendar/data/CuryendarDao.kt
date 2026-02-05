@@ -1,28 +1,39 @@
 package io.github.stupidgame.curyendar.data
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CuryendarDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertGoal(goal: Goal)
+    @Upsert
+    suspend fun upsertTransaction(transaction: Transaction)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertExpense(expense: Expense)
+    @Query("SELECT * FROM transactions WHERE year = :year AND month = :month AND day = :day ORDER BY id ASC")
+    fun getTransactionsForDate(year: Int, month: Int, day: Int): Flow<List<Transaction>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertIncome(income: Income)
+    @Query("SELECT * FROM transactions WHERE (year < :year) OR (year = :year AND month < :month)")
+    fun getTransactionsUpTo(year: Int, month: Int): Flow<List<Transaction>>
 
-    @Query("SELECT * FROM goals WHERE year = :year AND month = :month AND day = :day")
-    fun getGoalsForDate(year: Int, month: Int, day: Int): Flow<List<Goal>>
+    @Query("SELECT * FROM transactions WHERE (year < :year) OR (year = :year AND month < :month) OR (year = :year AND month = :month AND day <= :day)")
+    fun getTransactionsUpToDate(year: Int, month: Int, day: Int): Flow<List<Transaction>>
 
-    @Query("SELECT * FROM expenses WHERE year = :year AND month = :month AND day = :day")
-    fun getExpensesForDate(year: Int, month: Int, day: Int): Flow<List<Expense>>
+    @Query("SELECT * FROM transactions WHERE type = 'GOAL' AND ((year < :year) OR (year = :year AND month < :month) OR (year = :year AND month = :month AND day <= :day)) ORDER BY year DESC, month DESC, day DESC LIMIT 1")
+    fun getLatestGoalUpToDate(year: Int, month: Int, day: Int): Flow<Transaction?>
 
-    @Query("SELECT * FROM incomes WHERE year = :year AND month = :month AND day = :day")
-    fun getIncomesForDate(year: Int, month: Int, day: Int): Flow<List<Income>>
+    @Query("SELECT * FROM transactions WHERE year = :year AND month = :month")
+    fun getTransactionsForMonth(year: Int, month: Int): Flow<List<Transaction>>
+
+    @Query("SELECT * FROM transactions WHERE type = 'GOAL' ORDER BY year, month, day")
+    fun getAllGoals(): Flow<List<Transaction>>
+
+    @Upsert
+    suspend fun upsertEvent(event: Event)
+
+    @Query("SELECT * FROM events WHERE year = :year AND month = :month AND day = :day ORDER BY startTime ASC")
+    fun getEventsForDate(year: Int, month: Int, day: Int): Flow<List<Event>>
+
+    @Query("SELECT * FROM events WHERE year = :year AND month = :month")
+    fun getEventsForMonth(year: Int, month: Int): Flow<List<Event>>
 }
