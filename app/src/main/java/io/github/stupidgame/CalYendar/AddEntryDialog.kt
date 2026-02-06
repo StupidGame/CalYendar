@@ -44,7 +44,9 @@ fun AddGoalDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { amount = it },
+                    onValueChange = { value ->
+                        amount = value.filter { it.isDigit() }
+                    },
                     label = { Text("目標金額") },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -109,7 +111,9 @@ fun AddTransactionDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { amount = it },
+                    onValueChange = { value ->
+                        amount = value.filter { it.isDigit() }
+                    },
                     label = { Text(amountLabel) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)

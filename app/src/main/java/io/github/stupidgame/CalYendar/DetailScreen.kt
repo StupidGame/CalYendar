@@ -63,6 +63,7 @@ import io.github.stupidgame.CalYendar.data.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 
@@ -238,8 +239,18 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 month = viewModel.month,
                 day = viewModel.day,
                 onDismiss = { editingEvent = null },
-                onConfirm = { title, startTime, endTime, notificationMinutes ->
-                    viewModel.upsertEvent(it.copy(title = title, startTime = startTime, endTime = endTime, notificationMinutesBefore = notificationMinutes))
+                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes ->
+                    val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
+                    val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
+                    viewModel.upsertEvent(it.copy(
+                        year = startDate.year,
+                        month = startDate.monthValue - 1,
+                        day = startDate.dayOfMonth,
+                        title = title,
+                        startTime = startMillis,
+                        endTime = endMillis,
+                        notificationMinutesBefore = notificationMinutes
+                    ))
                     editingEvent = null
                 }
             )
@@ -315,15 +326,17 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 month = viewModel.month,
                 day = viewModel.day,
                 onDismiss = { showAddEventDialog = false },
-                onConfirm = { title, startTime, endTime, notificationMinutes ->
+                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes ->
+                    val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
+                    val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
                     viewModel.upsertEvent(
                         Event(
-                            year = viewModel.year,
-                            month = viewModel.month,
-                            day = viewModel.day,
+                            year = startDate.year,
+                            month = startDate.monthValue - 1,
+                            day = startDate.dayOfMonth,
                             title = title,
-                            startTime = startTime,
-                            endTime = endTime,
+                            startTime = startMillis,
+                            endTime = endMillis,
                             notificationMinutesBefore = notificationMinutes
                         )
                     )
