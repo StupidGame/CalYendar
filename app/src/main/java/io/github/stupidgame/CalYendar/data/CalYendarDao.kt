@@ -23,6 +23,9 @@ interface CalYendarDao {
     @Query("SELECT * FROM transactions WHERE (year < :year) OR (year = :year AND month < :month) OR (year = :year AND month = :month AND day <= :day)")
     fun getTransactionsUpToDate(year: Int, month: Int, day: Int): Flow<List<Transaction>>
 
+    @Query("SELECT * FROM transactions WHERE (year < :year) OR (year = :year AND month < :month) OR (year = :year AND month = :month AND day <= :day)")
+    fun getTransactionsUpToToday(year: Int, month: Int, day: Int): Flow<List<Transaction>>
+
     @Upsert
     suspend fun upsertFinancialGoal(goal: FinancialGoal)
 

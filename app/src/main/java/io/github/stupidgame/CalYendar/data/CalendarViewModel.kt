@@ -10,13 +10,11 @@ import biweekly.component.VEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import java.net.URL
+import java.time.LocalDate
 import java.util.Calendar
-import io.github.stupidgame.CalYendar.data.FinancialGoal
 
 data class DayState(
     val dayOfMonth: Int,
@@ -33,6 +31,7 @@ data class CalendarUiState(
     val year: Int,
     val month: Int,
     val dayStates: Map<Int, DayState> = emptyMap(),
+    val currentBalance: Long = 0L
 )
 
 class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
@@ -49,18 +48,35 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
 
     fun loadMonth(year: Int, month: Int) {
         viewModelScope.launch {
+            val today = LocalDate.now()
+            val transactionsUpToTodayFlow = dao.getTransactionsUpToToday(today.year, today.monthValue - 1, today.dayOfMonth)
             val transactionsBeforeFlow = dao.getTransactionsUpTo(year, month)
 
             combine(
+                transactionsUpToTodayFlow,
                 transactionsBeforeFlow,
                 dao.getTransactionsForMonth(year, month),
                 dao.getEventsForMonth(year, month),
                 dao.getAllGoals(),
                 _importedEvents
-            ) { transactionsBefore, monthTransactions, monthEvents, allGoals, importedEvents ->
-                // Sort goals for logic
+            ) { values ->
+                val transactionsUpToToday = values[0] as List<Transaction>
+                val transactionsBefore = values[1] as List<Transaction>
+                val monthTransactions = values[2] as List<Transaction>
+                val monthEvents = values[3] as List<Event>
+                val allGoals = values[4] as List<FinancialGoal>
+                val importedEvents = values[5] as List<VEvent>
+
                 val sortedGoals = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
                 val lastGoal = sortedGoals.lastOrNull()
+
+                val todayBalance = transactionsUpToToday.sumOf {
+                    when (it.type) {
+                        TransactionType.INCOME -> it.amount
+                        TransactionType.EXPENSE -> -it.amount
+                        else -> 0L
+                    }
+                }
 
                 var currentBalance = transactionsBefore.sumOf {
                     when (it.type) {
@@ -74,11 +90,8 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                 val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
                 val dayStates = mutableMapOf<Int, DayState>()
 
-                val today = java.time.LocalDate.now()
-
                 for (day in 1..daysInMonth) {
-                    val currentDayDate = java.time.LocalDate.of(year, month + 1, day)
-                    
+                    val currentDayDate = LocalDate.of(year, month + 1, day)
                     val dailyTransactions = monthTransactions.filter { it.day == day }
                     val dailyEvents = monthEvents.filter { it.day == day }
 
@@ -106,24 +119,21 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                     
                     val isFixedHoliday = JpHolidays.isHoliday(year, month, day)
 
-                    // Prediction Logic
                     var predictionDiff: Long? = null
                     if (lastGoal != null && !currentDayDate.isBefore(today)) {
-                         val lastGoalDate = java.time.LocalDate.of(lastGoal.year, lastGoal.month + 1, lastGoal.day)
+                         val lastGoalDate = LocalDate.of(lastGoal.year, lastGoal.month + 1, lastGoal.day)
                          if (!currentDayDate.isAfter(lastGoalDate)) {
-                             // Find next goal (inclusive of today)
                              val nextGoal = sortedGoals.firstOrNull { 
-                                 val gDate = java.time.LocalDate.of(it.year, it.month + 1, it.day)
+                                 val gDate = LocalDate.of(it.year, it.month + 1, it.day)
                                  !gDate.isBefore(currentDayDate)
                              }
 
                              if (nextGoal != null) {
-                                 val nextGoalDate = java.time.LocalDate.of(nextGoal.year, nextGoal.month + 1, nextGoal.day)
+                                 val nextGoalDate = LocalDate.of(nextGoal.year, nextGoal.month + 1, nextGoal.day)
                                  
-                                 // Calculate deducted goals (strictly before nextGoal)
                                  val deductedAmount = sortedGoals
                                      .filter { 
-                                         val gDate = java.time.LocalDate.of(it.year, it.month + 1, it.day)
+                                         val gDate = LocalDate.of(it.year, it.month + 1, it.day)
                                          gDate.isBefore(nextGoalDate)
                                      }
                                      .sumOf { it.amount }
@@ -145,7 +155,7 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                     )
                 }
 
-                CalendarUiState(year, month, dayStates)
+                CalendarUiState(year, month, dayStates, todayBalance)
 
             }.collect { calendarUiState ->
                 _uiState.value = calendarUiState
