@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar
+package io.github.stupidgame.CalYendar
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.github.stupidgame.calyendar.data.CalendarViewModel
+import io.github.stupidgame.CalYendar.data.CalendarViewModel
 
 @Composable
 fun SettingsScreen(

@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar
+package io.github.stupidgame.CalYendar
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,9 +17,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import io.github.stupidgame.calyendar.data.FinancialGoal
-import io.github.stupidgame.calyendar.data.Transaction
-import io.github.stupidgame.calyendar.data.TransactionType
+import io.github.stupidgame.CalYendar.data.FinancialGoal
+import io.github.stupidgame.CalYendar.data.Transaction
+import io.github.stupidgame.CalYendar.data.TransactionType
 
 @Composable
 fun AddGoalDialog(

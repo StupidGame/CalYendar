@@ -1,12 +1,12 @@
-package io.github.stupidgame.calyendar
+package io.github.stupidgame.CalYendar
 
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import io.github.stupidgame.calyendar.data.calyendarDatabase
-import io.github.stupidgame.calyendar.data.calyendarDao
-import io.github.stupidgame.calyendar.data.Transaction
-import io.github.stupidgame.calyendar.data.TransactionType
+import io.github.stupidgame.CalYendar.data.CalYendarDatabase
+import io.github.stupidgame.CalYendar.data.CalYendarDao
+import io.github.stupidgame.CalYendar.data.Transaction
+import io.github.stupidgame.CalYendar.data.TransactionType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -17,13 +17,13 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class DatabaseTest {
-    private lateinit var database: calyendarDatabase
-    private lateinit var calyendarDao: calyendarDao
+    private lateinit var database: CalYendarDatabase
+    private lateinit var calyendarDao: CalYendarDao
 
     @Before
     fun setup() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        database = Room.inMemoryDatabaseBuilder(context, calyendarDatabase::class.java).build()
+        database = Room.inMemoryDatabaseBuilder(context, CalYendarDatabase::class.java).build()
         calyendarDao = database.calyendarDao()
     }
 

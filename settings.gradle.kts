@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Curyendar"
+rootProject.name = "CalYendar"
 include(":app")

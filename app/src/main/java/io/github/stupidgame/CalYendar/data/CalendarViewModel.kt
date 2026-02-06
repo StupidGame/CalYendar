@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar.data
+package io.github.stupidgame.CalYendar.data
 
 import android.content.Context
 import android.net.Uri
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import java.net.URL
 import java.util.Calendar
-import io.github.stupidgame.calyendar.data.FinancialGoal
+import io.github.stupidgame.CalYendar.data.FinancialGoal
 
 data class DayState(
     val dayOfMonth: Int,
@@ -35,7 +35,7 @@ data class CalendarUiState(
     val dayStates: Map<Int, DayState> = emptyMap(),
 )
 
-class CalendarViewModel(private val dao: calyendarDao) : ViewModel() {
+class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState(0,0))
     val uiState = _uiState.asStateFlow()
@@ -180,7 +180,7 @@ class CalendarViewModel(private val dao: calyendarDao) : ViewModel() {
     }
 }
 
-class CalendarViewModelFactory(private val dao: calyendarDao) : ViewModelProvider.Factory {
+class CalendarViewModelFactory(private val dao: CalYendarDao) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CalendarViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
