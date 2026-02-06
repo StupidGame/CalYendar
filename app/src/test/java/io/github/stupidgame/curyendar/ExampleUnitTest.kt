@@ -1,4 +1,4 @@
-package io.github.stupidgame.curyendar
+package io.github.stupidgame.calyendar
 
 import org.junit.Test
 

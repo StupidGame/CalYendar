@@ -1,4 +1,4 @@
-package io.github.stupidgame.curyendar
+package io.github.stupidgame.calyendar
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -47,13 +47,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.stupidgame.curyendar.data.CuryendarDao
-import io.github.stupidgame.curyendar.data.DetailUiState
-import io.github.stupidgame.curyendar.data.DetailViewModel
-import io.github.stupidgame.curyendar.data.DetailViewModelFactory
-import io.github.stupidgame.curyendar.data.Event
-import io.github.stupidgame.curyendar.data.Transaction
-import io.github.stupidgame.curyendar.data.TransactionType
+import io.github.stupidgame.calyendar.data.calyendarDao
+import io.github.stupidgame.calyendar.data.DetailUiState
+import io.github.stupidgame.calyendar.data.DetailViewModel
+import io.github.stupidgame.calyendar.data.DetailViewModelFactory
+import io.github.stupidgame.calyendar.data.Event
+import io.github.stupidgame.calyendar.data.FinancialGoal
+import io.github.stupidgame.calyendar.data.Transaction
+import io.github.stupidgame.calyendar.data.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
@@ -74,6 +75,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
     var showAddEventDialog by remember { mutableStateOf(false) }
 
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
+    var editingGoal by remember { mutableStateOf<FinancialGoal?>(null) }
     var editingEvent by remember { mutableStateOf<Event?>(null) }
 
     Scaffold(
@@ -97,7 +99,9 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                SummaryCard(balance = uiState.balance, goal = uiState.goal)
+                SummaryCard(balance = uiState.balance, goal = uiState.goal) {
+                    editingGoal = uiState.goal
+                }
             }
 
             if (uiState.events.isNotEmpty()) {
@@ -154,18 +158,19 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
             }
         }
 
+        editingGoal?.let {
+            AddGoalDialog(
+                goal = it,
+                onDismiss = { editingGoal = null },
+                onConfirm = { name, amount ->
+                    viewModel.upsertFinancialGoal(it.copy(name = name, amount = amount))
+                    editingGoal = null
+                }
+            )
+        }
+
         editingTransaction?.let {
             when (it.type) {
-                TransactionType.GOAL -> {
-                    AddGoalDialog(
-                        goal = it,
-                        onDismiss = { editingTransaction = null },
-                        onConfirm = { name, amount ->
-                            viewModel.upsertTransaction(it.copy(name = name, amount = amount))
-                            editingTransaction = null
-                        }
-                    )
-                }
                 TransactionType.INCOME -> {
                     AddTransactionDialog(
                         transaction = it,
@@ -188,6 +193,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                         }
                     )
                 }
+                else -> {}
             }
         }
 
@@ -210,13 +216,13 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 goal = null,
                 onDismiss = { showAddGoalDialog = false },
                 onConfirm = { name, amount ->
-                    viewModel.upsertTransaction(
-                        Transaction(
+
+                    viewModel.upsertFinancialGoal(
+                        FinancialGoal(
                             id = uiState.goal?.id ?: 0,
                             year = viewModel.year,
                             month = viewModel.month,
                             day = viewModel.day,
-                            type = TransactionType.GOAL,
                             name = name,
                             amount = amount
                         )
@@ -295,9 +301,9 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
 }
 
 @Composable
-fun SummaryCard(balance: Long, goal: Transaction?) {
+fun SummaryCard(balance: Long, goal: FinancialGoal?, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -310,7 +316,13 @@ fun SummaryCard(balance: Long, goal: Transaction?) {
             Spacer(modifier = Modifier.height(16.dp))
             if (goal != null) {
                 val percentage = if (goal.amount > 0) (balance.toFloat() / goal.amount.toFloat()) else if (balance >= goal.amount) 1f else 0f
-                val cardColor = if (percentage >= 1f) Color(0xFF66BB6A) else Color(0xFFEF5350)
+                
+                // Green if met, Yellow if close (80%), Red otherwise
+                val cardColor = when {
+                    percentage >= 1f -> Color(0xFF66BB6A)
+                    percentage >= 0.8f -> Color(0xFFFFEE58)
+                    else -> Color(0xFFEF5350)
+                }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -332,10 +344,16 @@ fun SummaryCard(balance: Long, goal: Transaction?) {
                     Text(text = "目標: %,d".format(goal.amount))
                 }
                 val difference = balance - goal.amount
+                val diffColor = when {
+                     difference >= 0 -> Color(0xFF2E7D32)
+                     percentage >= 0.8f -> Color(0xFFF9A825) // Dark Yellow
+                     else -> Color.Gray
+                }
+                
                 Text(
                     text = if (difference >= 0) "目標達成！ (+%,d)".format(difference) else "目標まであと %,d".format(-difference),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (difference >= 0) Color(0xFF66BB6A) else Color.Gray
+                    color = diffColor
                 )
 
             } else {
@@ -383,7 +401,7 @@ fun EventCard(event: Event, onClick: () -> Unit) {
 @Preview
 @Composable
 fun DetailScreenPreview() {
-    val fakeDao = object : CuryendarDao {
+    val fakeDao = object : calyendarDao {
         override fun getTransactionsUpToDate(year: Int, month: Int, day: Int): Flow<List<Transaction>> {
             return flowOf(listOf(
                 Transaction(1, 2024, 5, 1, TransactionType.INCOME, "給料", 100000),
@@ -391,8 +409,8 @@ fun DetailScreenPreview() {
             ))
         }
 
-        override fun getLatestGoalUpToDate(year: Int, month: Int, day: Int): Flow<Transaction?> {
-            return flowOf(Transaction(3, 2024, 5, 1, TransactionType.GOAL, "PS5", 50000))
+        override fun getLatestGoalUpToDate(year: Int, month: Int, day: Int): Flow<FinancialGoal?> {
+            return flowOf(FinancialGoal(3, 2024, 5, 1, "PS5", 50000))
         }
 
         override fun getEventsForDate(year: Int, month: Int, day: Int): Flow<List<Event>> {
@@ -409,6 +427,8 @@ fun DetailScreenPreview() {
 
         override suspend fun upsertTransaction(transaction: Transaction) {}
 
+        override suspend fun upsertFinancialGoal(goal: FinancialGoal) {}
+
         override suspend fun upsertEvent(event: Event) {}
 
         override fun getTransactionsUpTo(year: Int, month: Int): Flow<List<Transaction>> {
@@ -419,7 +439,7 @@ fun DetailScreenPreview() {
             return flowOf(emptyList())
         }
 
-        override fun getAllGoals(): Flow<List<Transaction>> {
+        override fun getAllGoals(): Flow<List<FinancialGoal>> {
             return flowOf(emptyList())
         }
 
@@ -436,7 +456,7 @@ fun RealDetailScreen(year: Int, month: Int, day: Int) {
     val context = LocalContext.current
     val viewModel: DetailViewModel = viewModel(
         factory = DetailViewModelFactory(
-            (context.applicationContext as CuryendarApplication).database.curyendarDao(),
+            (context.applicationContext as calyendarApplication).database.calyendarDao(),
             year, month, day
         )
     )

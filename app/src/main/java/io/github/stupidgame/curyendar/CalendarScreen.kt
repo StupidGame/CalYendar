@@ -1,8 +1,11 @@
-package io.github.stupidgame.curyendar
+package io.github.stupidgame.calyendar
 
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
@@ -42,61 +49,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.stupidgame.curyendar.data.CalendarViewModel
-import io.github.stupidgame.curyendar.data.CalendarViewModelFactory
-import io.github.stupidgame.curyendar.data.DayState
-import io.github.stupidgame.curyendar.data.TransactionType
+import io.github.stupidgame.calyendar.data.CalendarViewModel
+import io.github.stupidgame.calyendar.data.CalendarViewModelFactory
+import io.github.stupidgame.calyendar.data.DayState
+import io.github.stupidgame.calyendar.data.TransactionType
 import java.text.DateFormatSymbols
 import java.util.Calendar
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalendarScreen() {
-    val context = LocalContext.current
-    val viewModel: CalendarViewModel = viewModel(
-        factory = CalendarViewModelFactory(
-            (context.applicationContext as CuryendarApplication).database.curyendarDao()
-        )
-    )
+fun CalendarScreen(
+    viewModel: CalendarViewModel,
+    onDayClick: (Int) -> Unit
+) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let {
-            viewModel.importIcs(it, context) {
-                Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    // Initial load
-    LaunchedEffect(Unit) {
-        val calendar = Calendar.getInstance()
-        viewModel.loadMonth(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH))
-    }
-
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { importLauncher.launch(arrayOf("text/calendar")) }) {
-                Icon(Icons.Default.Share, contentDescription = "Import iCal")
-            }
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            MonthNavigator(uiState.year, uiState.month, onPrevious = {
-                val prevCalendar = Calendar.getInstance().apply {
-                    set(uiState.year, uiState.month, 1)
-                    add(Calendar.MONTH, -1)
-                }
-                viewModel.loadMonth(prevCalendar.get(Calendar.YEAR), prevCalendar.get(Calendar.MONTH))
-            }, onNext = {
-                val nextCalendar = Calendar.getInstance().apply {
-                    set(uiState.year, uiState.month, 1)
-                    add(Calendar.MONTH, 1)
-                }
-                viewModel.loadMonth(nextCalendar.get(Calendar.YEAR), nextCalendar.get(Calendar.MONTH))
-            })
-
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
             WeekdaysHeader()
 
             val calendar = Calendar.getInstance().apply {
@@ -110,37 +81,9 @@ fun CalendarScreen() {
                     Box(modifier = Modifier.aspectRatio(1f))
                 }
                 items(uiState.dayStates.values.toList()) { day ->
-                    DayCell(day)
+                    DayCell(day, uiState.year, uiState.month, onClick = { onDayClick(day.dayOfMonth) })
                 }
             }
-        }
-    }
-
-}
-
-@Composable
-fun MonthNavigator(
-    year: Int,
-    month: Int,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onPrevious) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Previous Month")
-        }
-        Text(
-            text = String.format(Locale.JAPAN, "%d年 %d月", year, month + 1),
-            style = MaterialTheme.typography.headlineMedium
-        )
-        IconButton(onClick = onNext) {
-            Icon(Icons.Default.ArrowForward, contentDescription = "Next Month")
         }
     }
 }
@@ -150,71 +93,118 @@ fun WeekdaysHeader() {
     val weekdays = DateFormatSymbols(Locale.JAPAN).shortWeekdays
     Row(modifier = Modifier.fillMaxWidth()) {
         for (i in Calendar.SUNDAY..Calendar.SATURDAY) {
+            val textColor = when (i) {
+                Calendar.SUNDAY -> Color(0xFFD32F2F) // Red
+                Calendar.SATURDAY -> Color(0xFF1976D2) // Blue
+                else -> MaterialTheme.colorScheme.onSurface
+            }
             Box(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = weekdays[i], fontSize = 12.sp)
+                Text(text = weekdays[i], fontSize = 12.sp, color = textColor)
             }
         }
     }
 }
 
 @Composable
-fun DayCell(dayState: DayState) {
-    val goal = dayState.goal
-    val balance = dayState.balance
-    val percentage = if (goal != null && goal.amount > 0) (balance.toFloat() / goal.amount.toFloat()) else 0f
+fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
+    val predictionDiff = dayState.predictionDiff
+    
+    // Background color based on prediction
     val cardColor = when {
-        goal == null -> MaterialTheme.colorScheme.surface
-        percentage >= 1f -> Color(0xFF66BB6A).copy(alpha = 0.3f)
-        else -> Color(0xFFEF5350).copy(alpha = 0.3f)
+        predictionDiff != null -> if (predictionDiff >= 0) Color(0xFFE8F5E9) else Color(0xFFFFEBEE) // Very Light Green / Red
+        else -> MaterialTheme.colorScheme.surface
     }
+
+    val calendar = Calendar.getInstance().apply { set(year, month, dayState.dayOfMonth) }
+    val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+    
+    val dateTextColor = when {
+        dayState.isHoliday || dayOfWeek == Calendar.SUNDAY -> Color(0xFFD32F2F)
+        dayOfWeek == Calendar.SATURDAY -> Color(0xFF1976D2)
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
+    val today = java.time.LocalDate.now()
+    val currentDayDate = java.time.LocalDate.of(year, month + 1, dayState.dayOfMonth)
+    val isToday = currentDayDate.isEqual(today)
 
     Card(
         modifier = Modifier
             .padding(2.dp)
-            .aspectRatio(1f),
-        colors = CardDefaults.cardColors(containerColor = cardColor)
+            .aspectRatio(1f)
+            .let { 
+                if (isToday) it.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)) 
+                else it 
+            }
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(4.dp)
+                .padding(2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Date
             Text(
                 text = dayState.dayOfMonth.toString(),
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                fontSize = 12.sp,
+                color = dateTextColor
             )
-            Spacer(modifier = Modifier.height(2.dp))
-
-            dayState.events.take(1).forEach {
-                Text(it.title, fontSize = 8.sp, maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
+            
+            // Events (Dot indicators or very small text)
+            if (dayState.events.isNotEmpty() || dayState.icalEvents.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                    repeat(dayState.events.size) {
+                        Box(modifier = Modifier.size(4.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                        Spacer(modifier = Modifier.width(1.dp))
+                    }
+                    repeat(dayState.icalEvents.size) {
+                        Box(modifier = Modifier.size(4.dp).background(Color.Cyan, CircleShape))
+                        Spacer(modifier = Modifier.width(1.dp))
+                    }
+                }
             }
-            dayState.icalEvents.take(1).forEach {
-                Text(it.summary.value, fontSize = 8.sp, maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
-            }
 
+            // Income / Expense
             val income = dayState.transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
             val expense = dayState.transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
 
             if (income > 0) {
-                Text("+%,d".format(income), color = Color(0xFF2E7D32), fontSize = 8.sp, maxLines = 1)
+                Text("収+%,d".format(income), color = Color(0xFF2E7D32), fontSize = 7.sp, maxLines = 1, lineHeight = 8.sp)
             }
             if (expense > 0) {
-                Text("-%,d".format(expense), color = Color(0xFFC62828), fontSize = 8.sp, maxLines = 1)
+                Text("支-%,d".format(expense), color = Color(0xFFC62828), fontSize = 7.sp, maxLines = 1, lineHeight = 8.sp)
             }
 
-            if (goal != null) {
-                val difference = balance - goal.amount
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Prediction / Goal Difference
+            if (predictionDiff != null) {
+                val prefix = if (predictionDiff >= 0) "余" else "不"
+                val color = if (predictionDiff >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
                 Text(
-                    text = if (difference >= 0) "達成!" else "あと%,d".format(-difference),
-                    fontSize = 8.sp,
-                    color = if (difference >= 0) Color(0xFF66BB6A) else Color.Gray,
-                    maxLines = 1
+                    text = "$prefix%,d".format(predictionDiff),
+                    fontSize = 9.sp,
+                    color = color,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    textAlign = TextAlign.Center
                 )
+            } else if (dayState.goal != null) {
+                 val diff = dayState.balance - dayState.goal.amount
+                 Text(
+                    text = "残%,d".format(diff), // Current Balance - Goal (negative usually)
+                     fontSize = 8.sp,
+                     color = Color.Gray,
+                     maxLines = 1
+                 )
             }
         }
     }

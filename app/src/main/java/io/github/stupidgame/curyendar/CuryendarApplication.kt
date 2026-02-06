@@ -1,8 +1,8 @@
-package io.github.stupidgame.curyendar
+package io.github.stupidgame.calyendar
 
 import android.app.Application
-import io.github.stupidgame.curyendar.data.CuryendarDatabase
+import io.github.stupidgame.calyendar.data.calyendarDatabase
 
-class CuryendarApplication : Application() {
-    val database: CuryendarDatabase by lazy { CuryendarDatabase.getDatabase(this) }
+class calyendarApplication : Application() {
+    val database: calyendarDatabase by lazy { calyendarDatabase.getDatabase(this) }
 }

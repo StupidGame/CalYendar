@@ -1,64 +1,96 @@
-package io.github.stupidgame.curyendar
+package io.github.stupidgame.calyendar
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.stupidgame.curyendar.data.CalendarViewModel
+import io.github.stupidgame.calyendar.data.CalendarViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onImport: () -> Unit,
-    viewModel: CalendarViewModel = viewModel()
+    calendarViewModel: CalendarViewModel,
+    onImportIcsClick: () -> Unit
 ) {
-    var url by remember { mutableStateOf("") }
-    val context = LocalContext.current
+    var webCalUrl by remember { mutableStateOf("") }
+    var notificationOneDayBefore by remember { mutableStateOf(true) }
+    var notificationOneHourBefore by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Settings") })
-        }
-    ) { innerPadding ->
-        Column(modifier = Modifier
-            .padding(innerPadding)
-            .padding(16.dp)) {
-            Button(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
-                Text("iCalファイルを選択")
+    Scaffold { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp)
+        ) {
+            Text("設定", style = MaterialTheme.typography.headlineMedium)
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text("カレンダーインポート", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Button(
+                onClick = onImportIcsClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("iCalファイル (.ics) をインポート")
             }
+            
             Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = url, 
-                    onValueChange = { url = it }, 
-                    label = { Text("WebcalのURL") },
-                    modifier = Modifier.weight(1f)
-                )
-                Button(onClick = {
-                    viewModel.importWebcal(url) {
-                        Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-                    }
-                }) {
-                    Text("インポート")
-                }
+            
+            OutlinedTextField(
+                value = webCalUrl,
+                onValueChange = { webCalUrl = it },
+                label = { Text("WebCal URL") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { calendarViewModel.importWebcal(webCalUrl) {} },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = webCalUrl.isNotBlank()
+            ) {
+                Text("WebCalをインポート")
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Text("通知設定 (デフォルト)", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("1日前に通知")
+                Switch(checked = notificationOneDayBefore, onCheckedChange = { notificationOneDayBefore = it })
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("1時間前に通知")
+                Switch(checked = notificationOneHourBefore, onCheckedChange = { notificationOneHourBefore = it })
             }
         }
     }

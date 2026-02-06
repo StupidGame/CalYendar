@@ -1,9 +1,9 @@
-package io.github.stupidgame.curyendar.data
+package io.github.stupidgame.calyendar.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-sealed interface CuryendarItem {
+sealed interface calyendarItem {
     val year: Int
     val month: Int
     val day: Int
@@ -16,7 +16,7 @@ data class Goal(
     override val year: Int,
     override val month: Int,
     override val day: Int
-) : CuryendarItem
+) : calyendarItem
 
 @Entity(tableName = "expenses")
 data class Expense(
@@ -27,7 +27,7 @@ data class Expense(
     override val year: Int,
     override val month: Int,
     override val day: Int
-) : CuryendarItem
+) : calyendarItem
 
 @Entity(tableName = "incomes")
 data class Income(
@@ -38,4 +38,4 @@ data class Income(
     override val year: Int,
     override val month: Int,
     override val day: Int
-) : CuryendarItem
+) : calyendarItem
