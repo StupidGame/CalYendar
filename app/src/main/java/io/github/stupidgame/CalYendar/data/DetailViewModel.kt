@@ -46,15 +46,33 @@ class DetailViewModel(private val dao: CalYendarDao, val year: Int, val month: I
         }
     }
 
+    fun deleteTransaction(transaction: Transaction) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteTransaction(transaction)
+        }
+    }
+
     fun upsertFinancialGoal(goal: FinancialGoal) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.upsertFinancialGoal(goal)
         }
     }
 
+    fun deleteFinancialGoal(goal: FinancialGoal) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteFinancialGoal(goal)
+        }
+    }
+
     fun upsertEvent(event: Event) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.upsertEvent(event)
+        }
+    }
+
+    fun deleteEvent(event: Event) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteEvent(event)
         }
     }
 }

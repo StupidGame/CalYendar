@@ -47,6 +47,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -83,6 +85,7 @@ fun CalendarScreen(
         }
         val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
         val emptyCells = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
+        val totalGoal = uiState.dayStates.values.mapNotNull { it.goal }.sumOf { it.amount }
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
@@ -92,7 +95,7 @@ fun CalendarScreen(
                 Box(modifier = Modifier.aspectRatio(1f))
             }
             items(uiState.dayStates.values.toList()) { day ->
-                DayCell(day, uiState.year, uiState.month, onClick = { onDayClick(day.dayOfMonth) })
+                DayCell(day, uiState.year, uiState.month, totalGoal, onClick = { onDayClick(day.dayOfMonth) })
             }
         }
 
@@ -109,9 +112,14 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
     val difference = totalBalance - totalGoal
 
     val cardColor by animateColorAsState(
-        targetValue = if (difference >= 0) Color(0xFFC8E6C9) else Color(0xFFFFCDD2),
+        targetValue = getGradientColor(difference, totalGoal),
         label = ""
     )
+    val contentColor = if (cardColor.luminance() > 0.5f) {
+        Color.Black
+    } else {
+        Color.White
+    }
 
     Card(
         modifier = Modifier
@@ -121,19 +129,19 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("今月の目標", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("今月の目標", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = contentColor)
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("目標金額")
-                Text("%,d".format(totalGoal))
+                Text("目標金額", color = contentColor)
+                Text("%,d".format(totalGoal), color = contentColor)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("現在残高")
-                Text("%,d".format(totalBalance))
+                Text("現在残高", color = contentColor)
+                Text("%,d".format(totalBalance), color = contentColor)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("差額", fontWeight = FontWeight.Bold)
-                Text("%,d".format(difference), fontWeight = FontWeight.Bold)
+                Text("差額", fontWeight = FontWeight.Bold, color = contentColor)
+                Text("%,d".format(difference), fontWeight = FontWeight.Bold, color = contentColor)
             }
         }
     }
@@ -160,22 +168,26 @@ fun WeekdaysHeader() {
 }
 
 @Composable
-fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
+fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick: () -> Unit) {
     val predictionDiff = dayState.predictionDiff
     
-    // Background color based on prediction
     val cardColor = when {
-        predictionDiff != null -> if (predictionDiff >= 0) Color(0xFFE8F5E9) else Color(0xFFFFEBEE) // Very Light Green / Red
+        predictionDiff != null -> getGradientColor(predictionDiff, totalGoal)
         else -> MaterialTheme.colorScheme.surface
     }
+    val contentColor = if (cardColor.luminance() > 0.5f) Color.Black else Color.White
 
     val calendar = Calendar.getInstance().apply { set(year, month, dayState.dayOfMonth) }
     val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
     
-    val dateTextColor = when {
-        dayState.isHoliday || dayOfWeek == Calendar.SUNDAY -> Color(0xFFD32F2F)
-        dayOfWeek == Calendar.SATURDAY -> Color(0xFF1976D2)
-        else -> MaterialTheme.colorScheme.onSurface
+    val dateTextColor = if (cardColor != MaterialTheme.colorScheme.surface) {
+        contentColor
+    } else {
+        when {
+            dayState.isHoliday || dayOfWeek == Calendar.SUNDAY -> Color(0xFFD32F2F)
+            dayOfWeek == Calendar.SATURDAY -> Color(0xFF1976D2)
+            else -> MaterialTheme.colorScheme.onSurface
+        }
     }
 
     val today = java.time.LocalDate.now()
@@ -253,10 +265,31 @@ fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
                  Text(
                     text = "残%,d".format(diff), // Current Balance - Goal (negative usually)
                      fontSize = 8.sp,
-                     color = Color.Gray,
+                     color = if (cardColor.luminance() > 0.5f) Color.Black else Color.White,
                      maxLines = 1
                  )
             }
         }
     }
+}
+
+private fun getGradientColor(difference: Long, totalGoal: Long): Color {
+    val green = Color(0xFFA5D6A7) // Light Green
+    val yellow = Color(0xFFFFF59D) // Light Yellow
+    val red = Color(0xFFEF9A9A)   // Light Red
+
+    if (totalGoal <= 0L) {
+        return if (difference >= 0) green else red
+    }
+
+    //黒字の場合は緑
+    if (difference >= 0) {
+        return green
+    }
+
+    // 差額がマイナスの場合、目標額に対する割合を計算
+    // 0% (目標達成) -> 黄色, -100% (目標の2倍の赤字) -> 赤
+    val fraction = (-difference).toFloat() / totalGoal.toFloat()
+
+    return lerp(yellow, red, fraction.coerceIn(0f, 1f))
 }

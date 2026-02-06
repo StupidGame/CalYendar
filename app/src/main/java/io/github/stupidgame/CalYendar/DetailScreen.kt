@@ -2,7 +2,9 @@ package io.github.stupidgame.CalYendar
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,11 +18,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -61,7 +66,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
     val uiState by viewModel.uiState.collectAsState(initial = DetailUiState())
@@ -77,6 +82,35 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
     var editingGoal by remember { mutableStateOf<FinancialGoal?>(null) }
     var editingEvent by remember { mutableStateOf<Event?>(null) }
+
+    var showDeleteDialog by remember { mutableStateOf<Any?>(null) }
+
+    if (showDeleteDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            title = { Text("Delete Item") },
+            text = { Text("Are you sure you want to delete this item?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        when (val item = showDeleteDialog) {
+                            is Transaction -> viewModel.deleteTransaction(item)
+                            is FinancialGoal -> viewModel.deleteFinancialGoal(item)
+                            is Event -> viewModel.deleteEvent(item)
+                        }
+                        showDeleteDialog = null
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -99,9 +133,9 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                SummaryCard(balance = uiState.balance, goal = uiState.goal) {
+                SummaryCard(balance = uiState.balance, goal = uiState.goal, onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal }, onClick = {
                     editingGoal = uiState.goal
-                }
+                })
             }
 
             if (uiState.events.isNotEmpty()) {
@@ -109,7 +143,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     Text("Events", style = MaterialTheme.typography.titleLarge)
                 }
                 items(uiState.events) { event ->
-                    EventCard(event = event) {
+                    EventCard(event = event, onLongClick = { showDeleteDialog = event }) {
                         editingEvent = event
                     }
                 }
@@ -121,7 +155,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     Text("Transactions", style = MaterialTheme.typography.titleLarge)
                 }
                 items(uiState.dailyTransactions) { transaction ->
-                    TransactionCard(transaction = transaction) {
+                    TransactionCard(transaction = transaction, onLongClick = { showDeleteDialog = transaction }) {
                         editingTransaction = transaction
                     }
                 }
@@ -300,10 +334,11 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SummaryCard(balance: Long, goal: FinancialGoal?, onClick: () -> Unit) {
+fun SummaryCard(balance: Long, goal: FinancialGoal?, onLongClick: () -> Unit, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -367,9 +402,10 @@ fun SummaryCard(balance: Long, goal: FinancialGoal?, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TransactionCard(transaction: Transaction, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+fun TransactionCard(transaction: Transaction, onLongClick: () -> Unit, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         val (icon, color, sign) = when (transaction.type) {
             TransactionType.INCOME -> Triple(Icons.Filled.TrendingUp, Color(0xFF2E7D32), "+")
             TransactionType.EXPENSE -> Triple(Icons.Filled.TrendingDown, Color(0xFFC62828), "-")
@@ -384,9 +420,10 @@ fun TransactionCard(transaction: Transaction, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun EventCard(event: Event, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+fun EventCard(event: Event, onLongClick: () -> Unit, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
         val startTime = timeFormat.format(Date(event.startTime))
         val endTime = timeFormat.format(Date(event.endTime))
@@ -427,9 +464,15 @@ fun DetailScreenPreview() {
 
         override suspend fun upsertTransaction(transaction: Transaction) {}
 
+        override suspend fun deleteTransaction(transaction: Transaction) {}
+
         override suspend fun upsertFinancialGoal(goal: FinancialGoal) {}
 
+        override suspend fun deleteFinancialGoal(goal: FinancialGoal) {}
+
         override suspend fun upsertEvent(event: Event) {}
+
+        override suspend fun deleteEvent(event: Event) {}
 
         override fun getTransactionsUpTo(year: Int, month: Int): Flow<List<Transaction>> {
             return flowOf(emptyList())

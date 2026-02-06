@@ -1,6 +1,7 @@
 package io.github.stupidgame.CalYendar.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
@@ -9,6 +10,9 @@ import kotlinx.coroutines.flow.Flow
 interface CalYendarDao {
     @Upsert
     suspend fun upsertTransaction(transaction: Transaction)
+
+    @Delete
+    suspend fun deleteTransaction(transaction: Transaction)
 
     @Query("SELECT * FROM transactions WHERE year = :year AND month = :month AND day = :day ORDER BY id ASC")
     fun getTransactionsForDate(year: Int, month: Int, day: Int): Flow<List<Transaction>>
@@ -22,6 +26,9 @@ interface CalYendarDao {
     @Upsert
     suspend fun upsertFinancialGoal(goal: FinancialGoal)
 
+    @Delete
+    suspend fun deleteFinancialGoal(goal: FinancialGoal)
+
     @Query("SELECT * FROM financial_goals WHERE (year < :year) OR (year = :year AND month < :month) OR (year = :year AND month = :month AND day <= :day) ORDER BY year DESC, month DESC, day DESC LIMIT 1")
     fun getLatestGoalUpToDate(year: Int, month: Int, day: Int): Flow<FinancialGoal?>
 
@@ -33,6 +40,9 @@ interface CalYendarDao {
 
     @Upsert
     suspend fun upsertEvent(event: Event)
+
+    @Delete
+    suspend fun deleteEvent(event: Event)
 
     @Query("SELECT * FROM events WHERE year = :year AND month = :month AND day = :day ORDER BY startTime ASC")
     fun getEventsForDate(year: Int, month: Int, day: Int): Flow<List<Event>>
