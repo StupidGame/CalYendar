@@ -68,7 +68,6 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                 val importedEvents = values[5] as List<VEvent>
 
                 val sortedGoals = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
-                val lastGoal = sortedGoals.lastOrNull()
 
                 val todayBalance = transactionsUpToToday.sumOf {
                     when (it.type) {
@@ -103,10 +102,18 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                         }
                     }
 
-                    val latestGoal = sortedGoals.lastOrNull { goal ->
-                        (goal.year < year) ||
-                        (goal.year == year && goal.month < month) ||
-                        (goal.year == year && goal.month == month && goal.day <= day)
+                    val upcomingGoal = sortedGoals.firstOrNull { goal ->
+                        val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
+                        !goalDate.isBefore(currentDayDate)
+                    }
+
+                    val goalForDisplay = upcomingGoal?.let { goal ->
+                        val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
+                        if (currentDayDate.isBefore(today) || currentDayDate.isAfter(goalDate)) {
+                            null
+                        } else {
+                            goal
+                        }
                     }
 
                     val dailyIcalEvents = importedEvents.filter {
@@ -116,37 +123,27 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                             cal.get(Calendar.YEAR) == year && cal.get(Calendar.MONTH) == month && cal.get(Calendar.DAY_OF_MONTH) == day
                         } ?: false
                     }
-                    
+
                     val isFixedHoliday = JpHolidays.isHoliday(year, month, day)
 
                     var predictionDiff: Long? = null
-                    if (lastGoal != null && !currentDayDate.isBefore(today)) {
-                         val lastGoalDate = LocalDate.of(lastGoal.year, lastGoal.month + 1, lastGoal.day)
-                         if (!currentDayDate.isAfter(lastGoalDate)) {
-                             val nextGoal = sortedGoals.firstOrNull { 
-                                 val gDate = LocalDate.of(it.year, it.month + 1, it.day)
-                                 !gDate.isBefore(currentDayDate)
-                             }
-
-                             if (nextGoal != null) {
-                                 val nextGoalDate = LocalDate.of(nextGoal.year, nextGoal.month + 1, nextGoal.day)
-                                 
-                                 val deductedAmount = sortedGoals
-                                     .filter { 
-                                         val gDate = LocalDate.of(it.year, it.month + 1, it.day)
-                                         gDate.isBefore(nextGoalDate)
-                                     }
-                                     .sumOf { it.amount }
-
-                                 predictionDiff = (currentBalance - deductedAmount) - nextGoal.amount
-                             }
-                         }
+                    if (!currentDayDate.isBefore(today)) {
+                        predictionDiff = upcomingGoal?.let { goal ->
+                            val upcomingGoalIndex = sortedGoals.indexOf(goal)
+                            if (upcomingGoalIndex != -1) {
+                                val goalsToConsider = sortedGoals.subList(0, upcomingGoalIndex + 1)
+                                val totalGoalCost = goalsToConsider.sumOf { it.amount }
+                                currentBalance - totalGoalCost
+                            } else {
+                                null
+                            }
+                        }
                     }
 
                     dayStates[day] = DayState(
                         dayOfMonth = day,
                         balance = currentBalance,
-                        goal = latestGoal,
+                        goal = goalForDisplay,
                         events = dailyEvents,
                         transactions = dailyTransactions,
                         icalEvents = dailyIcalEvents,

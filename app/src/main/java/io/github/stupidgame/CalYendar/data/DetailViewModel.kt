@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 import io.github.stupidgame.CalYendar.data.FinancialGoal
+import java.time.LocalDate
 
 data class DetailUiState(
     val balance: Long = 0,
@@ -21,10 +22,10 @@ class DetailViewModel(private val dao: CalYendarDao, val year: Int, val month: I
 
     val uiState: Flow<DetailUiState> = combine(
         dao.getTransactionsUpToDate(year, month, day),
-        dao.getLatestGoalUpToDate(year, month, day),
+        dao.getAllGoals(),
         dao.getEventsForDate(year, month, day),
         dao.getTransactionsForDate(year, month, day)
-    ) { allTransactions, latestGoal, dailyEvents, dailyTransactions ->
+    ) { allTransactions, allGoals, dailyEvents, dailyTransactions ->
         val balance = allTransactions.sumOf {
             when (it.type) {
                 TransactionType.INCOME -> it.amount
@@ -32,6 +33,14 @@ class DetailViewModel(private val dao: CalYendarDao, val year: Int, val month: I
                 else -> 0L
             }
         }
+
+        val currentDayDate = LocalDate.of(year, month + 1, day)
+        val latestGoal = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
+            .firstOrNull { goal ->
+                val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
+                !currentDayDate.isAfter(goalDate)
+            }
+
         DetailUiState(
             balance = balance,
             goal = latestGoal,
