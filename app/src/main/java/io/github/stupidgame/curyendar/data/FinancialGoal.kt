@@ -3,21 +3,13 @@ package io.github.stupidgame.calyendar.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "transactions")
-data class Transaction(
+@Entity(tableName = "financial_goals")
+data class FinancialGoal(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val year: Int,
     val month: Int,
     val day: Int,
-    val type: TransactionType,
     val name: String,
-    val amount: Long,
-    val details: String? = null
+    val amount: Long
 )
-
-enum class TransactionType {
-    GOAL,
-    EXPENSE,
-    INCOME
-}

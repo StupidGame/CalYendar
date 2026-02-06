@@ -1,4 +1,4 @@
-package io.github.stupidgame.curyendar.ui.theme
+package io.github.stupidgame.calyendar.ui.theme
 
 import android.app.Activity
 import android.os.Build
@@ -38,7 +38,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun CuryendarTheme(
+fun calyendarTheme(
     useDarkTheme: Boolean = false,
     useSystemSettings: Boolean = true,
     content: @Composable () -> Unit

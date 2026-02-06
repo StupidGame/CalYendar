@@ -1,4 +1,4 @@
-package io.github.stupidgame.curyendar.ui.theme
+package io.github.stupidgame.calyendar.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

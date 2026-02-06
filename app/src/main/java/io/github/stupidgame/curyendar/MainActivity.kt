@@ -1,4 +1,4 @@
-package io.github.stupidgame.curyendar
+package io.github.stupidgame.calyendar
 
 import android.net.Uri
 import android.os.Bundle
@@ -70,13 +70,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import io.github.stupidgame.curyendar.data.CalendarViewModel
-import io.github.stupidgame.curyendar.data.CalendarViewModelFactory
-import io.github.stupidgame.curyendar.data.DayState
-import io.github.stupidgame.curyendar.data.DetailViewModel
-import io.github.stupidgame.curyendar.data.DetailViewModelFactory
-import io.github.stupidgame.curyendar.ui.theme.CuryendarTheme
+import io.github.stupidgame.calyendar.data.CalendarViewModel
+import io.github.stupidgame.calyendar.data.CalendarViewModelFactory
+import io.github.stupidgame.calyendar.data.DayState
+import io.github.stupidgame.calyendar.data.DetailViewModel
+import io.github.stupidgame.calyendar.data.DetailViewModelFactory
+import io.github.stupidgame.calyendar.ui.theme.calyendarTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -88,8 +89,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            CuryendarTheme {
-                CuryendarApp()
+            calyendarTheme {
+                calyendarApp()
             }
         }
     }
@@ -97,18 +98,18 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CuryendarApp() {
+fun calyendarApp() {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val app = context.applicationContext as CuryendarApplication
+    val app = context.applicationContext as calyendarApplication
 
     val calendar = Calendar.getInstance()
     var year by remember { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
     var month by remember { mutableIntStateOf(calendar.get(Calendar.MONTH)) }
 
-    val calendarViewModel: CalendarViewModel = viewModel(factory = CalendarViewModelFactory(app.database.curyendarDao()))
+    val calendarViewModel: CalendarViewModel = viewModel(factory = CalendarViewModelFactory(app.database.calyendarDao()))
 
     LaunchedEffect(year, month) {
         calendarViewModel.loadMonth(year, month)
@@ -124,15 +125,18 @@ fun CuryendarApp() {
         }
     }
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                Text("Curyendar", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineSmall)
+                Text("calyendar", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineSmall)
                 Divider()
                 NavigationDrawerItem(
                     label = { Text("Calendar") },
-                    selected = true, // Calendar is the main screen
+                    selected = currentRoute == "calendar",
                     onClick = {
                         navController.navigate("calendar") {
                             popUpTo(navController.graph.startDestinationId)
@@ -143,7 +147,7 @@ fun CuryendarApp() {
                 )
                 NavigationDrawerItem(
                     label = { Text("Settings") },
-                    selected = false,
+                    selected = currentRoute == "settings",
                     onClick = {
                         navController.navigate("settings")
                         scope.launch { drawerState.close() }
@@ -155,35 +159,89 @@ fun CuryendarApp() {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
+                val title = when {
+                    currentRoute?.startsWith("detail") == true -> {
+                        val args = navBackStackEntry?.arguments
+                        val dYear = args?.getString("year")?.toInt() ?: year
+                        val dMonth = args?.getString("month")?.toInt() ?: month
+                        val dDay = args?.getString("day")?.toInt() ?: 1
+                        "${dYear}年 ${dMonth + 1}月 ${dDay}日"
+                    }
+                    currentRoute == "settings" -> "Settings"
+                    else -> String.format(Locale.getDefault(), "%d年 %d月", year, month + 1)
+                }
+
                 TopAppBar(
-                    title = {
-                        Text(String.format(Locale.getDefault(), "%d年 %d月", year, month + 1))
-                    },
+                    title = { Text(title) },
                     navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        if (currentRoute == "calendar") {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            }
+                        } else {
+                            IconButton(onClick = { navController.popBackStack("calendar", false) }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
                         }
                     },
                     actions = {
-                        IconButton(onClick = {
-                            if (month == 0) {
-                                month = 11
-                                year--
-                            } else {
-                                month--
+                        if (currentRoute == "calendar") {
+                            IconButton(onClick = {
+                                if (month == 0) {
+                                    month = 11
+                                    year--
+                                } else {
+                                    month--
+                                }
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Month")
                             }
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Month")
-                        }
-                        IconButton(onClick = {
-                            if (month == 11) {
-                                month = 0
-                                year++
-                            } else {
-                                month++
+                            IconButton(onClick = {
+                                if (month == 11) {
+                                    month = 0
+                                    year++
+                                } else {
+                                    month++
+                                }
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month")
                             }
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month")
+                        } else if (currentRoute?.startsWith("detail") == true) {
+                            val args = navBackStackEntry?.arguments
+                            val dYear = args?.getString("year")?.toInt() ?: year
+                            val dMonth = args?.getString("month")?.toInt() ?: month
+                            val dDay = args?.getString("day")?.toInt() ?: 1
+
+                            IconButton(onClick = {
+                                val cal = Calendar.getInstance()
+                                cal.set(dYear, dMonth, dDay)
+                                cal.add(Calendar.DAY_OF_MONTH, -1)
+                                val newYear = cal.get(Calendar.YEAR)
+                                val newMonth = cal.get(Calendar.MONTH)
+                                val newDay = cal.get(Calendar.DAY_OF_MONTH)
+                                year = newYear
+                                month = newMonth
+                                navController.navigate("detail/$newYear/$newMonth/$newDay") {
+                                    popUpTo("calendar") { saveState = true }
+                                }
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Day")
+                            }
+                            IconButton(onClick = {
+                                val cal = Calendar.getInstance()
+                                cal.set(dYear, dMonth, dDay)
+                                cal.add(Calendar.DAY_OF_MONTH, 1)
+                                val newYear = cal.get(Calendar.YEAR)
+                                val newMonth = cal.get(Calendar.MONTH)
+                                val newDay = cal.get(Calendar.DAY_OF_MONTH)
+                                year = newYear
+                                month = newMonth
+                                navController.navigate("detail/$newYear/$newMonth/$newDay") {
+                                    popUpTo("calendar") { saveState = true }
+                                }
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Day")
+                            }
                         }
                     }
                 )
@@ -196,8 +254,10 @@ fun CuryendarApp() {
             ) {
                 composable("calendar") {
                     CalendarScreen(
-                        navController = navController,
-                        viewModel = calendarViewModel
+                        viewModel = calendarViewModel,
+                        onDayClick = { day ->
+                            navController.navigate("detail/$year/$month/$day")
+                        }
                     )
                 }
                 composable("detail/{year}/{month}/{day}") { backStackEntry ->
@@ -207,198 +267,10 @@ fun CuryendarApp() {
                     RealDetailScreen(year = detailYear, month = detailMonth, day = detailDay)
                 }
                 composable("settings") {
-                    SettingsScreen(onImport = { openDocumentLauncher.launch(arrayOf("text/calendar")) })
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CalendarScreen(
-    navController: NavController,
-    modifier: Modifier = Modifier,
-    viewModel: CalendarViewModel
-) {
-    val uiState by viewModel.uiState.collectAsState()
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 8.dp)
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-        if (uiState.dayStates.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else {
-            CalendarGrid(year = uiState.year, month = uiState.month, dayStates = uiState.dayStates, navController = navController)
-        }
-    }
-}
-
-@Composable
-fun CalendarGrid(year: Int, month: Int, dayStates: Map<Int, DayState>, navController: NavController) {
-    val calendar = Calendar.getInstance()
-    calendar.set(year, month, 1)
-    val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 1 // Sunday is 0
-    val today = LocalDate.now()
-    val goalDate = dayStates.values.firstOrNull { it.goal != null }?.let { LocalDate.of(year, month + 1, it.dayOfMonth) }
-
-    DayOfWeekHeader()
-    Spacer(modifier = Modifier.height(8.dp))
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(7),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(firstDayOfWeek) { Box(modifier = Modifier.size(100.dp)) }
-
-        items(daysInMonth) { day ->
-            val dayOfMonth = day + 1
-            val dayState = dayStates[dayOfMonth]
-            if (dayState != null) {
-                val date = LocalDate.of(year, month + 1, dayOfMonth)
-                DayCell(
-                    dayState = dayState,
-                    date = date,
-                    goalDate = goalDate,
-                    onClick = { navController.navigate("detail/$year/$month/$dayOfMonth") }
-                )
-            }
-        }
-    }
-}
-
-// Japanese holiday determination logic
-fun isJapaneseHoliday(date: LocalDate): Boolean {
-    val year = date.year
-    val month = date.monthValue
-    val day = date.dayOfMonth
-
-    // Fixed holidays
-    if (month == 1 && day == 1) return true // New Year's Day
-    if (month == 2 && day == 11) return true // National Foundation Day
-    if (month == 2 && day == 23) return true // Emperor's Birthday
-    if (month == 4 && day == 29) return true // Showa Day
-    if (month == 5 && day == 3) return true // Constitution Memorial Day
-    if (month == 5 && day == 4) return true // Greenery Day
-    if (month == 5 && day == 5) return true // Children's Day
-    if (month == 7 && date.dayOfWeek.value == 1 && day >= 15 && day <= 21) return true // Marine Day (3rd Monday of July)
-    if (month == 8 && day == 11) return true // Mountain Day
-    if (month == 9 && date.dayOfWeek.value == 1 && day >= 15 && day <= 21) return true // Respect for the Aged Day (3rd Monday of September)
-    if (month == 10 && date.dayOfWeek.value == 1 && day >= 8 && day <= 14) return true // Sports Day (2nd Monday of October)
-    if (month == 11 && day == 3) return true // Culture Day
-    if (month == 11 && day == 23) return true // Labor Thanksgiving Day
-
-    // Vernal Equinox Day and Autumnal Equinox Day (simplified)
-    if (month == 3 && (day == 20 || day == 21)) return true
-    if (month == 9 && (day == 22 || day == 23)) return true
-
-    return false
-}
-
-@Composable
-fun DayOfWeekHeader() {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        val daysOfWeek = listOf("日", "月", "火", "水", "木", "金", "土")
-        for ((index, day) in daysOfWeek.withIndex()) {
-            val color = when (index) {
-                0 -> Color.Red
-                6 -> Color.Blue
-                else -> MaterialTheme.colorScheme.onBackground
-            }
-            Text(
-                text = day,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f),
-                color = color,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-fun DayCell(
-    dayState: DayState,
-    date: LocalDate,
-    goalDate: LocalDate?,
-    onClick: () -> Unit
-) {
-    val today = LocalDate.now()
-    val isHoliday = isJapaneseHoliday(date) || date.dayOfWeek.value == 7
-    val percentage = dayState.goal?.let { if (it.amount > 0) (dayState.balance.toFloat() / it.amount.toFloat()) else 0f } ?: 0f
-    val cardColor by animateColorAsState(
-        targetValue = goalDate?.let {
-            if (date.isBefore(today) || date.isAfter(it)) {
-                MaterialTheme.colorScheme.surfaceVariant
-            } else {
-                when {
-                    percentage >= 1f -> Color(0xFF1B5E20) // Dark Green
-                    percentage >= 0.5f -> Color(0xFFF9A825) // Dark Yellow
-                    else -> Color(0xFFB71C1C) // Dark Red
-                }
-            }
-        } ?: MaterialTheme.colorScheme.surfaceVariant
-    )
-
-    var cellModifier = Modifier
-        .fillMaxSize()
-        .heightIn(min = 120.dp)
-        .clickable(onClick = onClick)
-    if (date.isEqual(today)) {
-        cellModifier = cellModifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-    }
-
-    Card(
-        modifier = cellModifier,
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor)
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = dayState.dayOfMonth.toString(),
-                color = if (isHoliday) Color.Red else if (date.dayOfWeek.value == 6) Color.Blue else MaterialTheme.colorScheme.onSurface,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-
-            if (goalDate != null && !date.isBefore(today) && !date.isAfter(goalDate)) {
-                dayState.goal?.let {
-                    val difference = dayState.balance - it.amount
-                    Text(
-                        text = if (difference >= 0) "+%,d".format(difference) else "%,d".format(difference),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                    SettingsScreen(
+                        calendarViewModel = calendarViewModel,
+                        onImportIcsClick = { openDocumentLauncher.launch(arrayOf("text/calendar")) }
                     )
-                    Text(text = "%.0f%%".format(percentage * 100), color = MaterialTheme.colorScheme.onSurface, fontSize = 10.sp)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            dayState.icalEvents.forEach {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 2.dp)) {
-                    Box(modifier = Modifier.size(4.dp).background(Color.Cyan, CircleShape))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = it.summary?.value ?: "", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, maxLines = 1)
-                }
-            }
-            dayState.events.forEach {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 2.dp)) {
-                    Box(modifier = Modifier.size(4.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = it.title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, maxLines = 1)
                 }
             }
         }
@@ -407,8 +279,8 @@ fun DayCell(
 
 @Preview(showBackground = true)
 @Composable
-fun CuryendarAppPreview() {
-    CuryendarTheme {
-        CuryendarApp()
+fun calyendarAppPreview() {
+    calyendarTheme {
+        calyendarApp()
     }
 }
