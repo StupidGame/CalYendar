@@ -3,6 +3,7 @@ package io.github.stupidgame.CalYendar
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,14 +16,17 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
@@ -49,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.stupidgame.CalYendar.data.CalendarUiState
 import io.github.stupidgame.CalYendar.data.CalendarViewModel
 import io.github.stupidgame.CalYendar.data.CalendarViewModelFactory
 import io.github.stupidgame.CalYendar.data.DayState
@@ -66,23 +71,69 @@ fun CalendarScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            WeekdaysHeader()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        WeekdaysHeader()
 
-            val calendar = Calendar.getInstance().apply {
-                set(uiState.year, uiState.month, 1)
+        val calendar = Calendar.getInstance().apply {
+            set(uiState.year, uiState.month, 1)
+        }
+        val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+        val emptyCells = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(7),
+            modifier = Modifier.heightIn(max = 500.dp) // Adjust max height as needed
+        ) {
+            items(emptyCells) {
+                Box(modifier = Modifier.aspectRatio(1f))
             }
-            val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-            val emptyCells = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
+            items(uiState.dayStates.values.toList()) { day ->
+                DayCell(day, uiState.year, uiState.month, onClick = { onDayClick(day.dayOfMonth) })
+            }
+        }
 
-            LazyVerticalGrid(columns = GridCells.Fixed(7)) {
-                items(emptyCells) {
-                    Box(modifier = Modifier.aspectRatio(1f))
-                }
-                items(uiState.dayStates.values.toList()) { day ->
-                    DayCell(day, uiState.year, uiState.month, onClick = { onDayClick(day.dayOfMonth) })
-                }
+        MonthlyGoalCard(uiState = uiState)
+    }
+}
+
+@Composable
+fun MonthlyGoalCard(uiState: CalendarUiState) {
+    val totalGoal = uiState.dayStates.values.mapNotNull { it.goal }.sumOf { it.amount }
+    if (totalGoal == 0.toLong()) return
+
+    val totalBalance = uiState.dayStates.values.sumOf { it.balance }
+    val difference = totalBalance - totalGoal
+
+    val cardColor by animateColorAsState(
+        targetValue = if (difference >= 0) Color(0xFFC8E6C9) else Color(0xFFFFCDD2),
+        label = ""
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("今月の目標", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("目標金額")
+                Text("%,d".format(totalGoal))
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("現在残高")
+                Text("%,d".format(totalBalance))
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("差額", fontWeight = FontWeight.Bold)
+                Text("%,d".format(difference), fontWeight = FontWeight.Bold)
             }
         }
     }
