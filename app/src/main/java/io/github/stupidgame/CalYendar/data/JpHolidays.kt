@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar.data
+package io.github.stupidgame.CalYendar.data
 
 import java.time.DayOfWeek
 import java.time.LocalDate

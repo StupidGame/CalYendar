@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar
+package io.github.stupidgame.CalYendar
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -47,14 +47,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.stupidgame.calyendar.data.calyendarDao
-import io.github.stupidgame.calyendar.data.DetailUiState
-import io.github.stupidgame.calyendar.data.DetailViewModel
-import io.github.stupidgame.calyendar.data.DetailViewModelFactory
-import io.github.stupidgame.calyendar.data.Event
-import io.github.stupidgame.calyendar.data.FinancialGoal
-import io.github.stupidgame.calyendar.data.Transaction
-import io.github.stupidgame.calyendar.data.TransactionType
+import io.github.stupidgame.CalYendar.data.CalYendarDao
+import io.github.stupidgame.CalYendar.data.DetailUiState
+import io.github.stupidgame.CalYendar.data.DetailViewModel
+import io.github.stupidgame.CalYendar.data.DetailViewModelFactory
+import io.github.stupidgame.CalYendar.data.Event
+import io.github.stupidgame.CalYendar.data.FinancialGoal
+import io.github.stupidgame.CalYendar.data.Transaction
+import io.github.stupidgame.CalYendar.data.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
@@ -401,7 +401,7 @@ fun EventCard(event: Event, onClick: () -> Unit) {
 @Preview
 @Composable
 fun DetailScreenPreview() {
-    val fakeDao = object : calyendarDao {
+    val fakeDao = object : CalYendarDao {
         override fun getTransactionsUpToDate(year: Int, month: Int, day: Int): Flow<List<Transaction>> {
             return flowOf(listOf(
                 Transaction(1, 2024, 5, 1, TransactionType.INCOME, "給料", 100000),
@@ -456,7 +456,7 @@ fun RealDetailScreen(year: Int, month: Int, day: Int) {
     val context = LocalContext.current
     val viewModel: DetailViewModel = viewModel(
         factory = DetailViewModelFactory(
-            (context.applicationContext as calyendarApplication).database.calyendarDao(),
+            (context.applicationContext as CalYendarApplication).database.calyendarDao(),
             year, month, day
         )
     )

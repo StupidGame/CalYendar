@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar.data
+package io.github.stupidgame.CalYendar.data
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-import io.github.stupidgame.calyendar.data.FinancialGoal
+import io.github.stupidgame.CalYendar.data.FinancialGoal
 
 data class DetailUiState(
     val balance: Long = 0,
@@ -17,7 +17,7 @@ data class DetailUiState(
     val events: List<Event> = emptyList()
 )
 
-class DetailViewModel(private val dao: calyendarDao, val year: Int, val month: Int, val day: Int) : ViewModel() {
+class DetailViewModel(private val dao: CalYendarDao, val year: Int, val month: Int, val day: Int) : ViewModel() {
 
     val uiState: Flow<DetailUiState> = combine(
         dao.getTransactionsUpToDate(year, month, day),
@@ -59,7 +59,7 @@ class DetailViewModel(private val dao: calyendarDao, val year: Int, val month: I
     }
 }
 
-class DetailViewModelFactory(private val dao: calyendarDao, private val year: Int, private val month: Int, private val day: Int) : ViewModelProvider.Factory {
+class DetailViewModelFactory(private val dao: CalYendarDao, private val year: Int, private val month: Int, private val day: Int) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

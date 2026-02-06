@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar
+package io.github.stupidgame.CalYendar
 
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -49,10 +49,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.stupidgame.calyendar.data.CalendarViewModel
-import io.github.stupidgame.calyendar.data.CalendarViewModelFactory
-import io.github.stupidgame.calyendar.data.DayState
-import io.github.stupidgame.calyendar.data.TransactionType
+import io.github.stupidgame.CalYendar.data.CalendarViewModel
+import io.github.stupidgame.CalYendar.data.CalendarViewModelFactory
+import io.github.stupidgame.CalYendar.data.DayState
+import io.github.stupidgame.CalYendar.data.TransactionType
 import java.text.DateFormatSymbols
 import java.util.Calendar
 import java.util.Locale

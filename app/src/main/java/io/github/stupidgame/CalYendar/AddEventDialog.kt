@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar
+package io.github.stupidgame.CalYendar
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -28,7 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.github.stupidgame.calyendar.data.Event
+import io.github.stupidgame.CalYendar.data.Event
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime

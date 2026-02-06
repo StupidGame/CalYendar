@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar.data
+package io.github.stupidgame.CalYendar.data
 
 import androidx.room.Dao
 import androidx.room.Query
@@ -6,7 +6,7 @@ import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface calyendarDao {
+interface CalYendarDao {
     @Upsert
     suspend fun upsertTransaction(transaction: Transaction)
 

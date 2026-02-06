@@ -1,4 +1,4 @@
-package io.github.stupidgame.calyendar
+package io.github.stupidgame.CalYendar
 
 import android.net.Uri
 import android.os.Bundle
@@ -72,12 +72,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import io.github.stupidgame.calyendar.data.CalendarViewModel
-import io.github.stupidgame.calyendar.data.CalendarViewModelFactory
-import io.github.stupidgame.calyendar.data.DayState
-import io.github.stupidgame.calyendar.data.DetailViewModel
-import io.github.stupidgame.calyendar.data.DetailViewModelFactory
-import io.github.stupidgame.calyendar.ui.theme.calyendarTheme
+import io.github.stupidgame.CalYendar.data.CalendarViewModel
+import io.github.stupidgame.CalYendar.data.CalendarViewModelFactory
+import io.github.stupidgame.CalYendar.data.DayState
+import io.github.stupidgame.CalYendar.data.DetailViewModel
+import io.github.stupidgame.CalYendar.data.DetailViewModelFactory
+import io.github.stupidgame.CalYendar.ui.theme.CalYendarTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -89,8 +89,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            calyendarTheme {
-                calyendarApp()
+            CalYendarTheme {
+                CalYendarApp()
             }
         }
     }
@@ -98,12 +98,12 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun calyendarApp() {
+fun CalYendarApp() {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val app = context.applicationContext as calyendarApplication
+    val app = context.applicationContext as CalYendarApplication
 
     val calendar = Calendar.getInstance()
     var year by remember { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
@@ -132,7 +132,7 @@ fun calyendarApp() {
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                Text("calyendar", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineSmall)
+                Text("CalYendar", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineSmall)
                 Divider()
                 NavigationDrawerItem(
                     label = { Text("Calendar") },
@@ -279,8 +279,8 @@ fun calyendarApp() {
 
 @Preview(showBackground = true)
 @Composable
-fun calyendarAppPreview() {
-    calyendarTheme {
-        calyendarApp()
+fun CalYendarAppPreview() {
+    CalYendarTheme {
+        CalYendarApp()
     }
 }
