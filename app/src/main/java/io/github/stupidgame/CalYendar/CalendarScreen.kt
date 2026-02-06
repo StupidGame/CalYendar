@@ -1,8 +1,5 @@
 package io.github.stupidgame.CalYendar
 
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,21 +24,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -49,15 +37,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.stupidgame.CalYendar.data.CalendarUiState
 import io.github.stupidgame.CalYendar.data.CalendarViewModel
-import io.github.stupidgame.CalYendar.data.CalendarViewModelFactory
 import io.github.stupidgame.CalYendar.data.DayState
 import io.github.stupidgame.CalYendar.data.TransactionType
 import java.text.DateFormatSymbols
@@ -71,7 +56,6 @@ fun CalendarScreen(
     onDayClick: (Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -105,14 +89,18 @@ fun CalendarScreen(
 
 @Composable
 fun MonthlyGoalCard(uiState: CalendarUiState) {
-    val totalGoal = uiState.dayStates.values.mapNotNull { it.goal }.sumOf { it.amount }
-    if (totalGoal == 0.toLong()) return
+    val goalsInMonth = uiState.dayStates.values
+        .mapNotNull { it.goal }
+        .filter { it.year == uiState.year && it.month == uiState.month }
+        .distinct()
 
-    val totalBalance = uiState.dayStates.values.sumOf { it.balance }
-    val difference = totalBalance - totalGoal
+    if (goalsInMonth.isEmpty()) return
+
+    val totalGoalInMonth = goalsInMonth.sumOf { it.amount }
+    val difference = uiState.currentBalance - totalGoalInMonth
 
     val cardColor by animateColorAsState(
-        targetValue = getGradientColor(difference, totalGoal),
+        targetValue = getGradientColor(difference, totalGoalInMonth),
         label = ""
     )
     val contentColor = if (cardColor.luminance() > 0.5f) {
@@ -131,13 +119,23 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("今月の目標", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = contentColor)
             Spacer(modifier = Modifier.height(8.dp))
+
+            goalsInMonth.forEach { goal ->
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(goal.name, color = contentColor)
+                    Text("%,d".format(goal.amount), color = contentColor)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("目標金額", color = contentColor)
-                Text("%,d".format(totalGoal), color = contentColor)
+                Text("目標合計", color = contentColor)
+                Text("%,d".format(totalGoalInMonth), color = contentColor)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("現在残高", color = contentColor)
-                Text("%,d".format(totalBalance), color = contentColor)
+                Text("%,d".format(uiState.currentBalance), color = contentColor)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("差額", fontWeight = FontWeight.Bold, color = contentColor)
