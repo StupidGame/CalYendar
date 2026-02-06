@@ -15,6 +15,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
@@ -43,7 +45,7 @@ fun AddEventDialog(
     month: Int,
     day: Int,
     onDismiss: () -> Unit,
-    onConfirm: (title: String, startTime: Long, endTime: Long, notificationMinutes: Long) -> Unit
+    onConfirm: (title: String, startDate: LocalDate, startTime: LocalTime, endDate: LocalDate, endTime: LocalTime, zoneId: ZoneId, notificationMinutes: Long) -> Unit
 ) {
     var title by remember { mutableStateOf(event?.title ?: "") }
     val initialStartDate = event?.let { Instant.ofEpochMilli(it.startTime).atZone(ZoneId.systemDefault()).toLocalDate() } ?: LocalDate.of(year, month + 1, day)
@@ -93,47 +95,47 @@ fun AddEventDialog(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = startDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("開始日") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { showDatePicker = true; editingStartDate = true }
-                    )
+                     Column(modifier = Modifier.weight(1f)) {
+                        Text("開始日", style = MaterialTheme.typography.labelSmall)
+                        OutlinedButton(
+                            onClick = { showDatePicker = true; editingStartDate = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(startDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
+                        }
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedTextField(
-                        value = startTime.format(DateTimeFormatter.ofPattern("HH:mm")),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("開始時刻") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { showTimePicker = true; editingStartDate = true }
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("開始時刻", style = MaterialTheme.typography.labelSmall)
+                        OutlinedButton(
+                            onClick = { showTimePicker = true; editingStartDate = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(startTime.format(DateTimeFormatter.ofPattern("HH:mm")))
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = endDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("終了日") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { showDatePicker = true; editingStartDate = false }
-                    )
+                     Column(modifier = Modifier.weight(1f)) {
+                        Text("終了日", style = MaterialTheme.typography.labelSmall)
+                        OutlinedButton(
+                            onClick = { showDatePicker = true; editingStartDate = false },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(endDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
+                        }
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedTextField(
-                        value = endTime.format(DateTimeFormatter.ofPattern("HH:mm")),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("終了時刻") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { showTimePicker = true; editingStartDate = false }
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("終了時刻", style = MaterialTheme.typography.labelSmall)
+                        OutlinedButton(
+                            onClick = { showTimePicker = true; editingStartDate = false },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(endTime.format(DateTimeFormatter.ofPattern("HH:mm")))
+                        }
+                    }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 ExposedDropdownMenuBox(
@@ -239,8 +241,6 @@ fun AddEventDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
-                    val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
                     val finalNotificationMinutes = if (notificationMinutes == -2L) {
                         val value = customNotificationValue.toLongOrNull() ?: 0
                         when (customNotificationUnit) {
@@ -252,7 +252,7 @@ fun AddEventDialog(
                     } else {
                         notificationMinutes
                     }
-                    onConfirm(title, startMillis, endMillis, finalNotificationMinutes)
+                    onConfirm(title, startDate, startTime, endDate, endTime, zoneId, finalNotificationMinutes)
                 },
                 enabled = title.isNotBlank()
             ) {
