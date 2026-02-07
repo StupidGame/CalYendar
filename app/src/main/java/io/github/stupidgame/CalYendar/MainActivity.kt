@@ -259,7 +259,7 @@ fun CalYendarApp() {
                                 year = newYear
                                 month = newMonth
                                 navController.navigate("detail/$newYear/$newMonth/$newDay") {
-                                    popUpTo("calendar") { saveState = true }
+                                    popUpTo("calendar") {}
                                 }
                             }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Day")
@@ -274,7 +274,7 @@ fun CalYendarApp() {
                                 year = newYear
                                 month = newMonth
                                 navController.navigate("detail/$newYear/$newMonth/$newDay") {
-                                    popUpTo("calendar") { saveState = true }
+                                    popUpTo("calendar") {}
                                 }
                             }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Day")
