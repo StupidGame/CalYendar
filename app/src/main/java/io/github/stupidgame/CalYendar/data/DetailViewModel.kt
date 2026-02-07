@@ -13,6 +13,7 @@ import java.time.LocalDate
 
 data class DetailUiState(
     val balance: Long = 0,
+    val transactionBalance: Long = 0,
     val goal: FinancialGoal? = null,
     val dailyTransactions: List<Transaction> = emptyList(),
     val events: List<Event> = emptyList()
@@ -26,7 +27,7 @@ class DetailViewModel(private val dao: CalYendarDao, val year: Int, val month: I
         dao.getEventsForDate(year, month, day),
         dao.getTransactionsForDate(year, month, day)
     ) { allTransactions, allGoals, dailyEvents, dailyTransactions ->
-        val balance = allTransactions.sumOf {
+        val transactionBalance = allTransactions.sumOf {
             when (it.type) {
                 TransactionType.INCOME -> it.amount
                 TransactionType.EXPENSE -> -it.amount
@@ -35,14 +36,26 @@ class DetailViewModel(private val dao: CalYendarDao, val year: Int, val month: I
         }
 
         val currentDayDate = LocalDate.of(year, month + 1, day)
-        val latestGoal = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
-            .firstOrNull { goal ->
-                val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
-                !currentDayDate.isAfter(goalDate)
+        val sortedGoals = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
+        val latestGoal = sortedGoals.firstOrNull { goal ->
+            val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
+            !currentDayDate.isAfter(goalDate)
+        }
+
+        val finalBalance = latestGoal?.let { goal ->
+            val upcomingGoalIndex = sortedGoals.indexOf(goal)
+            if (upcomingGoalIndex != -1) {
+                val goalsToConsider = sortedGoals.subList(0, upcomingGoalIndex + 1)
+                val totalGoalCost = goalsToConsider.sumOf { it.amount }
+                transactionBalance - totalGoalCost
+            } else {
+                null
             }
+        }
 
         DetailUiState(
-            balance = balance,
+            balance = finalBalance ?: transactionBalance,
+            transactionBalance = transactionBalance,
             goal = latestGoal,
             dailyTransactions = dailyTransactions,
             events = dailyEvents

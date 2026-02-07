@@ -134,7 +134,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                SummaryCard(balance = uiState.balance, goal = uiState.goal, onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal }, onClick = {
+                SummaryCard(transactionBalance = uiState.transactionBalance, finalBalance = uiState.balance, goal = uiState.goal, onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal }, onClick = {
                     editingGoal = uiState.goal
                 })
             }
@@ -349,22 +349,22 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SummaryCard(balance: Long, goal: FinancialGoal?, onLongClick: () -> Unit, onClick: () -> Unit) {
+fun SummaryCard(transactionBalance: Long, finalBalance: Long, goal: FinancialGoal?, onLongClick: () -> Unit, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "現在の残高", style = MaterialTheme.typography.titleMedium)
+            Text(text = "今日の時点の残高", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "%,d".format(balance),
+                text = "%,d".format(transactionBalance),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.height(16.dp))
             if (goal != null) {
-                val percentage = if (goal.amount > 0) (balance.toFloat() / goal.amount.toFloat()) else if (balance >= goal.amount) 1f else 0f
-                
+                val percentage = if (goal.amount > 0) (transactionBalance.toFloat() / goal.amount.toFloat()) else if (transactionBalance >= goal.amount) 1f else 0f
+
                 // Green if met, Yellow if close (80%), Red otherwise
                 val cardColor = when {
                     percentage >= 1f -> Color(0xFF66BB6A)
@@ -391,16 +391,17 @@ fun SummaryCard(balance: Long, goal: FinancialGoal?, onLongClick: () -> Unit, on
                     Text(text = "達成率: %.0f".format(percentage * 100) + "%")
                     Text(text = "目標: %,d".format(goal.amount))
                 }
-                val difference = balance - goal.amount
+                val difference = finalBalance
                 val diffColor = when {
-                     difference >= 0 -> Color(0xFF2E7D32)
-                     percentage >= 0.8f -> Color(0xFFF9A825) // Dark Yellow
-                     else -> Color.Gray
+                    difference >= 0 -> Color(0xFF2E7D32)
+                    percentage >= 0.8f -> Color(0xFFF9A825) // Dark Yellow
+                    else -> Color.Gray
                 }
-                
+
                 Text(
-                    text = if (difference >= 0) "目標達成！ (+%,d)".format(difference) else "目標まであと %,d".format(-difference),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = if (difference >= 0) "目標日には %,d 円余ります".format(difference) else "目標日には %,d 円足りません".format(-difference),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
                     color = diffColor
                 )
 
@@ -460,7 +461,7 @@ fun DetailScreenPreview() {
         }
 
         override fun getLatestGoalUpToDate(year: Int, month: Int, day: Int): Flow<FinancialGoal?> {
-            return flowOf(FinancialGoal(3, 2024, 5, 1, "PS5", 50000))
+            return flowOf(FinancialGoal(3, 2024, 6, 1, "新しいPC", 150000))
         }
 
         override fun getEventsForDate(year: Int, month: Int, day: Int): Flow<List<Event>> {
@@ -496,10 +497,14 @@ fun DetailScreenPreview() {
         }
 
         override fun getAllGoals(): Flow<List<FinancialGoal>> {
-            return flowOf(emptyList())
+            return flowOf(listOf(FinancialGoal(3, 2024, 6, 1, "新しいPC", 150000)))
         }
 
         override fun getEventsForMonth(year: Int, month: Int): Flow<List<Event>> {
+            return flowOf(emptyList())
+        }
+
+        override fun getTransactionsUpToToday(year: Int, month: Int, day: Int): Flow<List<Transaction>> {
             return flowOf(emptyList())
         }
     }
