@@ -56,6 +56,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -153,11 +154,12 @@ fun CalYendarApp() {
         calendarViewModel.loadMonth(year, month)
     }
 
+    var isImportIcsAsHoliday by remember { mutableStateOf(false) }
     val openDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri: Uri? ->
         uri?.let {
-            calendarViewModel.importIcs(it, context) { message ->
+            calendarViewModel.importIcs(it, context, isImportIcsAsHoliday) { message ->
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         }
@@ -307,7 +309,10 @@ fun CalYendarApp() {
                 composable("settings") {
                     SettingsScreen(
                         calendarViewModel = calendarViewModel,
-                        onImportIcsClick = { openDocumentLauncher.launch(arrayOf("text/calendar")) }
+                        onImportIcsClick = { isHoliday ->
+                            isImportIcsAsHoliday = isHoliday
+                            openDocumentLauncher.launch(arrayOf("text/calendar"))
+                        }
                     )
                 }
             }

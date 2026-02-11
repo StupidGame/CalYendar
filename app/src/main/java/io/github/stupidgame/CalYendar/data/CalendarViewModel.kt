@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.IOException
 import java.net.URL
 import java.time.LocalDate
 import java.util.Calendar
@@ -151,7 +154,7 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                         transactions = dailyTransactions,
                         icalEvents = dailyIcalEvents,
                         predictionDiff = predictionDiff,
-                        isHoliday = dailyIcalEvents.any { it.isHoliday }
+                        isHoliday = dailyIcalEvents.any { it.isHoliday } || dailyEvents.any { it.isHoliday }
                     )
                 }
 
@@ -163,25 +166,46 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
         }
     }
 
-    fun importIcs(uri: Uri, context: Context, onResult: (String) -> Unit) {
-        viewModelScope.launch {
+    fun importIcs(uri: Uri, context: Context, isHoliday: Boolean, onResult: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 context.contentResolver.openInputStream(uri)?.use {
                     val ical = Biweekly.parse(it).first()
-                    dao.upsertImportedEvents(ical.events.map { event -> ImportedEvent(event = event, isHoliday = false) })
+                    dao.upsertImportedEvents(ical.events.map { event ->
+                        val holiday = isHoliday || event.summary?.value?.contains("休日") == true
+                        ImportedEvent(event = event, isHoliday = holiday)
+                    })
                 }
-                onResult("インポートに成功しました")
+                withContext(Dispatchers.Main) {
+                    onResult("インポートに成功しました")
+                }
             }.onFailure {
-                onResult("インポートに失敗しました")
+                Log.e("CalendarViewModel", "Failed to import ics from $uri", it)
+                withContext(Dispatchers.Main) {
+                    onResult("インポートに失敗しました")
+                }
             }
         }
     }
 
-    fun importWebcal(url: String, onResult: (String) -> Unit) {
+    fun importWebcal(url: String, isHoliday: Boolean, onResult: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                val ical = Biweekly.parse(URL(url.replace("webcal", "https")).openStream()).first()
-                dao.upsertImportedEvents(ical.events.map { event -> ImportedEvent(event = event, isHoliday = false) })
+                val client = OkHttpClient()
+                val request = Request.Builder()
+                    .url(url.replace("webcal", "https"))
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
+
+                    response.body?.byteStream()?.let {
+                        val ical = Biweekly.parse(it).first()
+                        dao.upsertImportedEvents(ical.events.map { event ->
+                            val holiday = isHoliday || event.summary?.value?.contains("休日") == true
+                            ImportedEvent(event = event, isHoliday = holiday)
+                        })
+                    }
+                }
                 withContext(Dispatchers.Main) {
                     onResult("インポートに成功しました")
                 }

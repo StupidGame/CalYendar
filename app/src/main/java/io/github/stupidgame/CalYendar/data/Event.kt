@@ -12,6 +12,7 @@ data class Event(
     val day: Int,
     val title: String,
     val startTime: Long, // Store as epoch millis
-    val endTime: Long, // Store as epoch millis
-    val notificationMinutesBefore: Long // -1 for no notification
+    val endTime: Long, // Store as epoch millis,
+    val notificationMinutesBefore: Long, // -1 for no notification
+    val isHoliday: Boolean = false
 )

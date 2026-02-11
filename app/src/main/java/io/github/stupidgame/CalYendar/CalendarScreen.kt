@@ -168,8 +168,9 @@ fun WeekdaysHeader() {
 @Composable
 fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick: () -> Unit) {
     val predictionDiff = dayState.predictionDiff
-    
+
     val cardColor = when {
+        dayState.isHoliday -> Color(0xFFF5F5F5) // Light Gray for holidays
         predictionDiff != null -> getGradientColor(predictionDiff, totalGoal)
         else -> MaterialTheme.colorScheme.surface
     }
@@ -177,15 +178,11 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
 
     val calendar = Calendar.getInstance().apply { set(year, month, dayState.dayOfMonth) }
     val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-    
-    val dateTextColor = if (cardColor != MaterialTheme.colorScheme.surface) {
-        contentColor
-    } else {
-        when {
-            dayState.isHoliday || dayOfWeek == Calendar.SUNDAY -> Color(0xFFD32F2F)
-            dayOfWeek == Calendar.SATURDAY -> Color(0xFF1976D2)
-            else -> MaterialTheme.colorScheme.onSurface
-        }
+
+    val dateTextColor = when {
+        dayState.isHoliday || dayOfWeek == Calendar.SUNDAY -> Color(0xFFD32F2F)
+        dayOfWeek == Calendar.SATURDAY -> Color(0xFF1976D2)
+        else -> contentColor
     }
 
     val today = java.time.LocalDate.now()
@@ -196,9 +193,9 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
         modifier = Modifier
             .padding(2.dp)
             .aspectRatio(1f)
-            .let { 
-                if (isToday) it.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)) 
-                else it 
+            .let {
+                if (isToday) it.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                else it
             }
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = cardColor),
@@ -218,7 +215,7 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
                 fontSize = 12.sp,
                 color = dateTextColor
             )
-            
+
             // Events (Dot indicators or very small text)
             if (dayState.events.isNotEmpty() || dayState.icalEvents.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
@@ -259,13 +256,13 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
                     textAlign = TextAlign.Center
                 )
             } else if (dayState.goal != null) {
-                 val diff = dayState.balance - dayState.goal.amount
-                 Text(
+                val diff = dayState.balance - dayState.goal.amount
+                Text(
                     text = "残%,d".format(diff), // Current Balance - Goal (negative usually)
-                     fontSize = 8.sp,
-                     color = if (cardColor.luminance() > 0.5f) Color.Black else Color.White,
-                     maxLines = 1
-                 )
+                    fontSize = 8.sp,
+                    color = if (cardColor.luminance() > 0.5f) Color.Black else Color.White,
+                    maxLines = 1
+                )
             }
         }
     }
