@@ -7,12 +7,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import biweekly.Biweekly
-import biweekly.component.VEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.net.URL
 import java.time.LocalDate
 import java.util.Calendar
@@ -23,9 +24,9 @@ data class DayState(
     val goal: FinancialGoal?,
     val events: List<Event>,
     val transactions: List<Transaction>,
-    val icalEvents: List<VEvent> = emptyList(),
-    val isHoliday: Boolean = false,
-    val predictionDiff: Long? = null
+    val icalEvents: List<ImportedEvent> = emptyList(),
+    val predictionDiff: Long? = null,
+    val isHoliday: Boolean
 )
 
 data class CalendarUiState(
@@ -37,12 +38,17 @@ data class CalendarUiState(
 
 class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CalendarUiState(0,0))
+    private val _uiState = MutableStateFlow(
+        Calendar.getInstance().let {
+            CalendarUiState(it.get(Calendar.YEAR), it.get(Calendar.MONTH))
+        }
+    )
     val uiState = _uiState.asStateFlow()
 
     init {
-        // Optional: Load webcal if internet works, otherwise ignore silently
-        importWebcal("https://www.officeholidays.com/ics/japan") {}
+        viewModelScope.launch {
+            loadMonth(uiState.value.year, uiState.value.month)
+        }
     }
 
     fun loadMonth(year: Int, month: Int) {
@@ -64,7 +70,7 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                 val monthTransactions = values[2] as List<Transaction>
                 val monthEvents = values[3] as List<Event>
                 val allGoals = values[4] as List<FinancialGoal>
-                val importedEvents = (values[5] as List<ImportedEvent>).map { it.event } 
+                val importedEvents = values[5] as List<ImportedEvent>
 
                 val sortedGoals = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
 
@@ -115,15 +121,13 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                         }
                     }
 
-                    val dailyIcalEvents = importedEvents.filter {
+                    val dailyIcalEvents = importedEvents.filter { ie ->
                         val cal = Calendar.getInstance()
-                        it.dateStart?.value?.let {
+                        ie.event.dateStart?.value?.let {
                             date -> cal.time = date
                             cal.get(Calendar.YEAR) == year && cal.get(Calendar.MONTH) == month && cal.get(Calendar.DAY_OF_MONTH) == day
                         } ?: false
                     }
-
-                    val isFixedHoliday = JpHolidays.isHoliday(year, month, day)
 
                     var predictionDiff: Long? = null
                     if (!currentDayDate.isBefore(today)) {
@@ -146,8 +150,8 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                         events = dailyEvents,
                         transactions = dailyTransactions,
                         icalEvents = dailyIcalEvents,
-                        isHoliday = isFixedHoliday,
-                        predictionDiff = predictionDiff
+                        predictionDiff = predictionDiff,
+                        isHoliday = dailyIcalEvents.any { it.isHoliday }
                     )
                 }
 
@@ -164,7 +168,7 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
             runCatching {
                 context.contentResolver.openInputStream(uri)?.use {
                     val ical = Biweekly.parse(it).first()
-                    dao.upsertImportedEvents(ical.events.map { ImportedEvent(event = it) })
+                    dao.upsertImportedEvents(ical.events.map { event -> ImportedEvent(event = event, isHoliday = false) })
                 }
                 onResult("インポートに成功しました")
             }.onFailure {
@@ -177,11 +181,15 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 val ical = Biweekly.parse(URL(url.replace("webcal", "https")).openStream()).first()
-                dao.upsertImportedEvents(ical.events.map { ImportedEvent(event = it) })
-                onResult("インポートに成功しました")
+                dao.upsertImportedEvents(ical.events.map { event -> ImportedEvent(event = event, isHoliday = false) })
+                withContext(Dispatchers.Main) {
+                    onResult("インポートに成功しました")
+                }
             }.onFailure {
                 Log.e("CalendarViewModel", "Failed to import webcal from $url", it)
-                onResult("インポートに失敗しました")
+                withContext(Dispatchers.Main) {
+                    onResult("インポートに失敗しました")
+                }
             }
         }
     }

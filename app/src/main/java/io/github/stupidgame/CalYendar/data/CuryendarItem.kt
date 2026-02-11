@@ -2,6 +2,7 @@ package io.github.stupidgame.CalYendar.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import biweekly.component.VEvent
 
 sealed interface CalYendarItem {
     val year: Int

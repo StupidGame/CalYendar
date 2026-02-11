@@ -6,8 +6,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 import biweekly.Biweekly
 import biweekly.ICalendar
 import biweekly.component.VEvent
@@ -28,18 +26,12 @@ abstract class CalYendarDatabase : RoomDatabase() {
                     CalYendarDatabase::class.java,
                     "calyendar_database"
                 )
-                .addMigrations(MIGRATION_3_4)
+                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance
             }
         }
-    }
-}
-
-val MIGRATION_3_4 = object : Migration(3, 4) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS `imported_events` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `event` TEXT)")
     }
 }
 
@@ -57,6 +49,6 @@ object VEventConverter {
     @TypeConverter
     @JvmStatic
     fun toVEvent(eventString: String?): VEvent? {
-        return eventString?.let { Biweekly.parse(it).first().getEvents().firstOrNull() }
+        return eventString?.let { Biweekly.parse(it).first().events.firstOrNull() }
     }
 }
