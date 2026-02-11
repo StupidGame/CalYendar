@@ -4,8 +4,16 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import biweekly.Biweekly
+import biweekly.ICalendar
+import biweekly.component.VEvent
 
-@Database(entities = [Transaction::class, Event::class, FinancialGoal::class], version = 3, exportSchema = false)
+@Database(entities = [Transaction::class, Event::class, FinancialGoal::class, ImportedEvent::class], version = 4, exportSchema = false)
+@TypeConverters(VEventConverter::class)
 abstract class CalYendarDatabase : RoomDatabase() {
     abstract fun calyendarDao(): CalYendarDao
 
@@ -20,11 +28,35 @@ abstract class CalYendarDatabase : RoomDatabase() {
                     CalYendarDatabase::class.java,
                     "calyendar_database"
                 )
-                .fallbackToDestructiveMigration()
+                .addMigrations(MIGRATION_3_4)
                 .build()
                 INSTANCE = instance
                 instance
             }
         }
+    }
+}
+
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS `imported_events` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `event` TEXT)")
+    }
+}
+
+object VEventConverter {
+    @TypeConverter
+    @JvmStatic
+    fun fromVEvent(event: VEvent?): String? {
+        return event?.let {
+            val ical = ICalendar()
+            ical.addEvent(it)
+            Biweekly.write(ical).go()
+        }
+    }
+
+    @TypeConverter
+    @JvmStatic
+    fun toVEvent(eventString: String?): VEvent? {
+        return eventString?.let { Biweekly.parse(it).first().getEvents().firstOrNull() }
     }
 }

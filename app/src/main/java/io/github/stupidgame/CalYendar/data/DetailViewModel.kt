@@ -14,13 +14,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.Calendar
 
 data class DetailUiState(
     val balance: Long = 0,
     val transactionBalance: Long = 0,
     val goal: FinancialGoal? = null,
     val dailyTransactions: List<Transaction> = emptyList(),
-    val events: List<Event> = emptyList()
+    val events: List<Event> = emptyList(),
+    val icalEvents: List<ImportedEvent> = emptyList()
 )
 
 class DetailViewModel(
@@ -35,9 +37,10 @@ class DetailViewModel(
         dao.getTransactionsUpToDate(year, month, day),
         dao.getAllGoals(),
         dao.getEventsForDate(year, month, day),
-        dao.getTransactionsForDate(year, month, day)
-    ) { allTransactions, allGoals, dailyEvents, dailyTransactions ->
-        val transactionBalance = allTransactions.sumOf {
+        dao.getTransactionsForDate(year, month, day),
+        dao.getImportedEvents()
+    ) { allTransactions, allGoals, dailyEvents, dailyTransactions, importedEvents ->
+        val transactionBalance = (allTransactions as List<Transaction>).sumOf {
             when (it.type) {
                 TransactionType.INCOME -> it.amount
                 TransactionType.EXPENSE -> -it.amount
@@ -46,7 +49,7 @@ class DetailViewModel(
         }
 
         val currentDayDate = LocalDate.of(year, month + 1, day)
-        val sortedGoals = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
+        val sortedGoals = (allGoals as List<FinancialGoal>).sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
         val latestGoal = sortedGoals.firstOrNull { goal ->
             val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
             !currentDayDate.isAfter(goalDate)
@@ -63,12 +66,21 @@ class DetailViewModel(
             }
         }
 
+        val dailyIcalEvents = (importedEvents as List<ImportedEvent>).filter {
+            val cal = Calendar.getInstance()
+            it.event.dateStart?.value?.let {
+                date -> cal.time = date
+                cal.get(Calendar.YEAR) == year && cal.get(Calendar.MONTH) == month && cal.get(Calendar.DAY_OF_MONTH) == day
+            } ?: false
+        }
+
         DetailUiState(
             balance = finalBalance ?: transactionBalance,
             transactionBalance = transactionBalance,
             goal = latestGoal,
-            dailyTransactions = dailyTransactions,
-            events = dailyEvents
+            dailyTransactions = dailyTransactions as List<Transaction>,
+            events = dailyEvents as List<Event>,
+            icalEvents = dailyIcalEvents
         )
     }
 
@@ -109,6 +121,18 @@ class DetailViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             cancelEventNotification(event)
             dao.deleteEvent(event)
+        }
+    }
+
+    fun deleteImportedEvent(event: ImportedEvent) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteImportedEvent(event)
+        }
+    }
+
+    fun clearImportedEvents() {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.clearImportedEvents()
         }
     }
 
