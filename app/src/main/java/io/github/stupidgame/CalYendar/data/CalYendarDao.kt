@@ -62,6 +62,9 @@ interface CalYendarDao {
     @Query("DELETE FROM imported_events")
     suspend fun clearImportedEvents()
 
+    @Query("DELETE FROM imported_events WHERE isHoliday = 1")
+    suspend fun deleteHolidays()
+
     @Query("SELECT * FROM imported_events")
     fun getImportedEvents(): Flow<List<ImportedEvent>>
 }

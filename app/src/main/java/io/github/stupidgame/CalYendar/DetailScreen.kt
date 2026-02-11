@@ -557,6 +557,8 @@ fun DetailScreenPreview() {
         override suspend fun clearImportedEvents() {}
 
         override suspend fun deleteImportedEvent(event: ImportedEvent) {}
+        
+        override suspend fun deleteHolidays() {}
 
     }
     val context = LocalContext.current
