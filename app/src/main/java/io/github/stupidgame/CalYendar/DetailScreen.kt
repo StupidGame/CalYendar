@@ -54,12 +54,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import biweekly.component.VEvent
 import io.github.stupidgame.CalYendar.data.CalYendarDao
 import io.github.stupidgame.CalYendar.data.DetailUiState
 import io.github.stupidgame.CalYendar.data.DetailViewModel
 import io.github.stupidgame.CalYendar.data.DetailViewModelFactory
 import io.github.stupidgame.CalYendar.data.Event
 import io.github.stupidgame.CalYendar.data.FinancialGoal
+import io.github.stupidgame.CalYendar.data.ImportedEvent
 import io.github.stupidgame.CalYendar.data.Transaction
 import io.github.stupidgame.CalYendar.data.TransactionType
 import kotlinx.coroutines.flow.Flow
@@ -100,6 +102,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                             is Transaction -> viewModel.deleteTransaction(item)
                             is FinancialGoal -> viewModel.deleteFinancialGoal(item)
                             is Event -> viewModel.deleteEvent(item)
+                            is ImportedEvent -> viewModel.deleteImportedEvent(item)
                         }
                         showDeleteDialog = null
                     }
@@ -156,6 +159,15 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 }
             }
 
+            if (uiState.icalEvents.isNotEmpty()) {
+                item {
+                    Text("Imported Events", style = MaterialTheme.typography.titleLarge)
+                }
+                items(uiState.icalEvents) { event ->
+                    IcalEventCard(event = event, onLongClick = { showDeleteDialog = event })
+                }
+            }
+
             if (uiState.dailyTransactions.isNotEmpty()) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -194,6 +206,11 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                         headlineContent = { Text("イベントを追加") },
                         leadingContent = { Icon(Icons.Filled.Event, contentDescription = null) },
                         modifier = Modifier.clickable { showAddEventDialog = true; showBottomSheet = false }
+                    )
+                    ListItem(
+                        headlineContent = { Text("インポートしたイベントを削除") },
+                        leadingContent = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                        modifier = Modifier.clickable { viewModel.clearImportedEvents(); showBottomSheet = false }
                     )
                 }
             }
@@ -455,6 +472,22 @@ fun EventCard(event: Event, onLongClick: () -> Unit, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun IcalEventCard(event: ImportedEvent, onLongClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().combinedClickable(onClick = {}, onLongClick = onLongClick)) {
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val startTime = event.event.dateStart.value?.let { timeFormat.format(it) }
+        val endTime = event.event.dateEnd.value?.let { timeFormat.format(it) }
+
+        ListItem(
+            headlineContent = { Text(event.event.summary.value) },
+            supportingContent = { Text(if(startTime != null && endTime != null) "$startTime - $endTime" else "終日") }
+        )
+    }
+}
+
+
 @Preview
 @Composable
 fun DetailScreenPreview() {
@@ -515,6 +548,16 @@ fun DetailScreenPreview() {
         override fun getTransactionsUpToToday(year: Int, month: Int, day: Int): Flow<List<Transaction>> {
             return flowOf(emptyList())
         }
+        override fun getImportedEvents(): Flow<List<ImportedEvent>> {
+            return flowOf(emptyList())
+        }
+
+        override suspend fun upsertImportedEvents(events: List<ImportedEvent>) {}
+
+        override suspend fun clearImportedEvents() {}
+
+        override suspend fun deleteImportedEvent(event: ImportedEvent) {}
+
     }
     val context = LocalContext.current
     val viewModel = DetailViewModel(context.applicationContext as Application, fakeDao, 2024, 5, 17)

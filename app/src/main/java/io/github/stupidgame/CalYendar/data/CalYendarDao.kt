@@ -52,4 +52,16 @@ interface CalYendarDao {
 
     @Query("SELECT * FROM events WHERE year = :year AND month = :month")
     fun getEventsForMonth(year: Int, month: Int): Flow<List<Event>>
+
+    @Upsert
+    suspend fun upsertImportedEvents(events: List<ImportedEvent>)
+
+    @Delete
+    suspend fun deleteImportedEvent(event: ImportedEvent)
+
+    @Query("DELETE FROM imported_events")
+    suspend fun clearImportedEvents()
+
+    @Query("SELECT * FROM imported_events")
+    fun getImportedEvents(): Flow<List<ImportedEvent>>
 }

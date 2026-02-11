@@ -2,6 +2,7 @@ package io.github.stupidgame.CalYendar.data
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -39,8 +40,6 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
     private val _uiState = MutableStateFlow(CalendarUiState(0,0))
     val uiState = _uiState.asStateFlow()
 
-    private val _importedEvents = MutableStateFlow<List<VEvent>>(emptyList())
-
     init {
         // Optional: Load webcal if internet works, otherwise ignore silently
         importWebcal("https://www.officeholidays.com/ics/japan") {}
@@ -58,14 +57,14 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                 dao.getTransactionsForMonth(year, month),
                 dao.getEventsForMonth(year, month),
                 dao.getAllGoals(),
-                _importedEvents
+                dao.getImportedEvents()
             ) { values ->
                 val transactionsUpToToday = values[0] as List<Transaction>
                 val transactionsBefore = values[1] as List<Transaction>
                 val monthTransactions = values[2] as List<Transaction>
                 val monthEvents = values[3] as List<Event>
                 val allGoals = values[4] as List<FinancialGoal>
-                val importedEvents = values[5] as List<VEvent>
+                val importedEvents = (values[5] as List<ImportedEvent>).map { it.event } 
 
                 val sortedGoals = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
 
@@ -165,7 +164,7 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
             runCatching {
                 context.contentResolver.openInputStream(uri)?.use {
                     val ical = Biweekly.parse(it).first()
-                    _importedEvents.value = (_importedEvents.value + ical.events).distinct()
+                    dao.upsertImportedEvents(ical.events.map { ImportedEvent(event = it) })
                 }
                 onResult("インポートに成功しました")
             }.onFailure {
@@ -177,11 +176,12 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
     fun importWebcal(url: String, onResult: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                val ical = Biweekly.parse(URL(url).openStream()).first()
-                _importedEvents.value = (_importedEvents.value + ical.events).distinct()
+                val ical = Biweekly.parse(URL(url.replace("webcal", "https")).openStream()).first()
+                dao.upsertImportedEvents(ical.events.map { ImportedEvent(event = it) })
                 onResult("インポートに成功しました")
             }.onFailure {
-                // Silently fail or log
+                Log.e("CalendarViewModel", "Failed to import webcal from $url", it)
+                onResult("インポートに失敗しました")
             }
         }
     }
