@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -45,7 +46,7 @@ fun AddEventDialog(
     month: Int,
     day: Int,
     onDismiss: () -> Unit,
-    onConfirm: (title: String, startDate: LocalDate, startTime: LocalTime, endDate: LocalDate, endTime: LocalTime, zoneId: ZoneId, notificationMinutes: Long) -> Unit
+    onConfirm: (title: String, startDate: LocalDate, startTime: LocalTime, endDate: LocalDate, endTime: LocalTime, zoneId: ZoneId, notificationMinutes: Long, isHoliday: Boolean) -> Unit
 ) {
     var title by remember { mutableStateOf(event?.title ?: "") }
     val initialStartDate = event?.let { Instant.ofEpochMilli(it.startTime).atZone(ZoneId.systemDefault()).toLocalDate() } ?: LocalDate.of(year, month + 1, day)
@@ -80,6 +81,7 @@ fun AddEventDialog(
     var customNotificationUnit by remember { mutableStateOf("分") }
     val customNotificationUnits = remember { listOf("分", "時間", "日") }
     var customUnitDropDownExpanded by remember { mutableStateOf(false) }
+    var isHoliday by remember { mutableStateOf(event?.isHoliday ?: false) }
 
 
     AlertDialog(
@@ -236,6 +238,10 @@ fun AddEventDialog(
                         }
                     }
                 }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { isHoliday = !isHoliday }) {
+                    Checkbox(checked = isHoliday, onCheckedChange = { isHoliday = it })
+                    Text("休日として作成")
+                }
             }
         },
         confirmButton = {
@@ -252,7 +258,7 @@ fun AddEventDialog(
                     } else {
                         notificationMinutes
                     }
-                    onConfirm(title, startDate, startTime, endDate, endTime, zoneId, finalNotificationMinutes)
+                    onConfirm(title, startDate, startTime, endDate, endTime, zoneId, finalNotificationMinutes, isHoliday)
                 },
                 enabled = title.isNotBlank()
             ) {

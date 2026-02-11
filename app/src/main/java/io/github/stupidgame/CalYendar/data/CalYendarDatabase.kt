@@ -10,7 +10,7 @@ import biweekly.Biweekly
 import biweekly.ICalendar
 import biweekly.component.VEvent
 
-@Database(entities = [Transaction::class, Event::class, FinancialGoal::class, ImportedEvent::class], version = 4, exportSchema = false)
+@Database(entities = [Transaction::class, Event::class, FinancialGoal::class, ImportedEvent::class], version = 5, exportSchema = false)
 @TypeConverters(VEventConverter::class)
 abstract class CalYendarDatabase : RoomDatabase() {
     abstract fun calyendarDao(): CalYendarDao

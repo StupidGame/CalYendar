@@ -148,22 +148,40 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 })
             }
 
-            if (uiState.events.isNotEmpty()) {
+            val holidays = uiState.events.filter { it.isHoliday } + uiState.icalEvents.filter { it.isHoliday }
+            val regularEvents = uiState.events.filter { !it.isHoliday }
+            val regularIcalEvents = uiState.icalEvents.filter { !it.isHoliday }
+
+            if (holidays.isNotEmpty()) {
                 item {
-                    Text("Events", style = MaterialTheme.typography.titleLarge)
+                    Text("休日", style = MaterialTheme.typography.titleLarge)
                 }
-                items(uiState.events) { event ->
+                items(holidays) {
+                    when (it) {
+                        is Event -> EventCard(event = it, onLongClick = { showDeleteDialog = it }) {
+                            editingEvent = it
+                        }
+                        is ImportedEvent -> IcalEventCard(event = it, onLongClick = { showDeleteDialog = it })
+                    }
+                }
+            }
+
+            if (regularEvents.isNotEmpty()) {
+                item {
+                    Text("イベント", style = MaterialTheme.typography.titleLarge)
+                }
+                items(regularEvents) { event ->
                     EventCard(event = event, onLongClick = { showDeleteDialog = event }) {
                         editingEvent = event
                     }
                 }
             }
 
-            if (uiState.icalEvents.isNotEmpty()) {
+            if (regularIcalEvents.isNotEmpty()) {
                 item {
-                    Text("Imported Events", style = MaterialTheme.typography.titleLarge)
+                    Text("インポートしたイベント", style = MaterialTheme.typography.titleLarge)
                 }
-                items(uiState.icalEvents) { event ->
+                items(regularIcalEvents) { event ->
                     IcalEventCard(event = event, onLongClick = { showDeleteDialog = event })
                 }
             }
@@ -262,7 +280,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 month = viewModel.month,
                 day = viewModel.day,
                 onDismiss = { editingEvent = null },
-                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes ->
+                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes, isHoliday ->
                     val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
                     val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
                     viewModel.upsertEvent(it.copy(
@@ -272,7 +290,8 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                         title = title,
                         startTime = startMillis,
                         endTime = endMillis,
-                        notificationMinutesBefore = notificationMinutes
+                        notificationMinutesBefore = notificationMinutes,
+                        isHoliday = isHoliday
                     ))
                     editingEvent = null
                 }
@@ -349,7 +368,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 month = viewModel.month,
                 day = viewModel.day,
                 onDismiss = { showAddEventDialog = false },
-                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes ->
+                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes, isHoliday ->
                     val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
                     val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
                     viewModel.upsertEvent(
@@ -360,7 +379,8 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                             title = title,
                             startTime = startMillis,
                             endTime = endMillis,
-                            notificationMinutesBefore = notificationMinutes
+                            notificationMinutesBefore = notificationMinutes,
+                            isHoliday = isHoliday
                         )
                     )
                     showAddEventDialog = false

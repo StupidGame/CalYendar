@@ -84,6 +84,7 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("net.sf.biweekly:biweekly:0.6.7")
     implementation("org.mnode.ical4j:ical4j:3.2.6")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.navigation:navigation-compose:2.9.7")
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
