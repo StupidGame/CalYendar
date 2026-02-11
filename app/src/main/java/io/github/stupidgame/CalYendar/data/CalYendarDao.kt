@@ -42,7 +42,7 @@ interface CalYendarDao {
     fun getAllGoals(): Flow<List<FinancialGoal>>
 
     @Upsert
-    suspend fun upsertEvent(event: Event)
+    suspend fun upsertEvent(event: Event): Long
 
     @Delete
     suspend fun deleteEvent(event: Event)

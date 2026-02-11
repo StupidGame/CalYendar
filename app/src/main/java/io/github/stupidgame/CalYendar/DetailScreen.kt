@@ -1,5 +1,6 @@
 package io.github.stupidgame.CalYendar
 
+import android.app.Application
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -489,7 +490,9 @@ fun DetailScreenPreview() {
 
         override suspend fun deleteFinancialGoal(goal: FinancialGoal) {}
 
-        override suspend fun upsertEvent(event: Event) {}
+        override suspend fun upsertEvent(event: Event): Long {
+            return 0
+        }
 
         override suspend fun deleteEvent(event: Event) {}
 
@@ -513,16 +516,19 @@ fun DetailScreenPreview() {
             return flowOf(emptyList())
         }
     }
-    val viewModel = DetailViewModel(fakeDao, 2024, 5, 17)
+    val context = LocalContext.current
+    val viewModel = DetailViewModel(context.applicationContext as Application, fakeDao, 2024, 5, 17)
     DetailScreen(year = 2024, month = 5, day = 17, viewModel = viewModel)
 }
 
 @Composable
 fun RealDetailScreen(year: Int, month: Int, day: Int) {
     val context = LocalContext.current
+    val application = context.applicationContext as CalYendarApplication
     val viewModel: DetailViewModel = viewModel(
         factory = DetailViewModelFactory(
-            (context.applicationContext as CalYendarApplication).database.calyendarDao(),
+            application,
+            application.database.calyendarDao(),
             year, month, day
         )
     )

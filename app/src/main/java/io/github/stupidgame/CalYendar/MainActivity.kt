@@ -64,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -169,7 +170,7 @@ fun CalYendarApp() {
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                Text("CalYendar", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.app_name), modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineSmall)
                 Divider()
                 NavigationDrawerItem(
                     label = { Text("Calendar") },
