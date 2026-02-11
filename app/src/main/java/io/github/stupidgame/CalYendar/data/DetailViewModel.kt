@@ -1,14 +1,18 @@
 package io.github.stupidgame.CalYendar.data
 
+import android.app.AlarmManager
+import android.app.Application
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import io.github.stupidgame.CalYendar.EventNotificationReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-
-import io.github.stupidgame.CalYendar.data.FinancialGoal
 import java.time.LocalDate
 
 data class DetailUiState(
@@ -19,7 +23,13 @@ data class DetailUiState(
     val events: List<Event> = emptyList()
 )
 
-class DetailViewModel(private val dao: CalYendarDao, val year: Int, val month: Int, val day: Int) : ViewModel() {
+class DetailViewModel(
+    private val application: Application,
+    private val dao: CalYendarDao,
+    val year: Int,
+    val month: Int,
+    val day: Int
+) : ViewModel() {
 
     val uiState: Flow<DetailUiState> = combine(
         dao.getTransactionsUpToDate(year, month, day),
@@ -88,22 +98,69 @@ class DetailViewModel(private val dao: CalYendarDao, val year: Int, val month: I
 
     fun upsertEvent(event: Event) {
         viewModelScope.launch(Dispatchers.IO) {
-            dao.upsertEvent(event)
+            val id = dao.upsertEvent(event)
+            if (event.notificationMinutesBefore != (-1).toLong()) {
+                scheduleEventNotification(event.copy(id = id))
+            }
         }
     }
 
     fun deleteEvent(event: Event) {
         viewModelScope.launch(Dispatchers.IO) {
+            cancelEventNotification(event)
             dao.deleteEvent(event)
         }
     }
+
+    private fun scheduleEventNotification(event: Event) {
+        val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(application, EventNotificationReceiver::class.java).apply {
+            putExtra("event_title", event.title)
+            putExtra("event_id", event.id.toInt())
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            application,
+            event.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationTime =
+            event.startTime - (event.notificationMinutesBefore * 60 * 1000)
+
+        if (notificationTime > System.currentTimeMillis()) {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                notificationTime,
+                pendingIntent
+            )
+        }
+    }
+
+    private fun cancelEventNotification(event: Event) {
+        val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(application, EventNotificationReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(
+            application,
+            event.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
+    }
 }
 
-class DetailViewModelFactory(private val dao: CalYendarDao, private val year: Int, private val month: Int, private val day: Int) : ViewModelProvider.Factory {
+class DetailViewModelFactory(
+    private val application: Application,
+    private val dao: CalYendarDao,
+    private val year: Int,
+    private val month: Int,
+    private val day: Int
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return DetailViewModel(dao, year, month, day) as T
+            return DetailViewModel(application, dao, year, month, day) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

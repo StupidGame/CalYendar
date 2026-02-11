@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "events")
 data class Event(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
+    val id: Long = 0,
     val year: Int,
     val month: Int,
     val day: Int,
