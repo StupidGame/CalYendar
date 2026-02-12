@@ -11,13 +11,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
-import java.net.URL
 import java.time.LocalDate
 import java.util.Calendar
 
@@ -68,12 +66,12 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                 dao.getAllGoals(),
                 dao.getImportedEvents()
             ) { values ->
-                val transactionsUpToToday = values[0] as List<Transaction>
-                val transactionsBefore = values[1] as List<Transaction>
-                val monthTransactions = values[2] as List<Transaction>
-                val monthEvents = values[3] as List<Event>
-                val allGoals = values[4] as List<FinancialGoal>
-                val importedEvents = values[5] as List<ImportedEvent>
+                val transactionsUpToToday = values[0].filterIsInstance<Transaction>()
+                val transactionsBefore = values[1].filterIsInstance<Transaction>()
+                val monthTransactions = values[2].filterIsInstance<Transaction>()
+                val monthEvents = values[3].filterIsInstance<Event>()
+                val allGoals = values[4].filterIsInstance<FinancialGoal>()
+                val importedEvents = values[5].filterIsInstance<ImportedEvent>()
 
                 val sortedGoals = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
 
@@ -131,6 +129,8 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                             cal.get(Calendar.YEAR) == year && cal.get(Calendar.MONTH) == month && cal.get(Calendar.DAY_OF_MONTH) == day
                         } ?: false
                     }
+
+
 
                     var predictionDiff: Long? = null
                     if (!currentDayDate.isBefore(today)) {

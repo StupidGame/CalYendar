@@ -582,6 +582,7 @@ fun DetailScreenPreview() {
 
     }
     val context = LocalContext.current
+    @Suppress("ViewModelConstructorInComposable")
     val viewModel = DetailViewModel(context.applicationContext as Application, fakeDao, 2024, 5, 17)
     DetailScreen(year = 2024, month = 5, day = 17, viewModel = viewModel)
 }

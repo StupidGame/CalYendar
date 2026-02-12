@@ -150,10 +150,6 @@ fun CalYendarApp() {
 
     val calendarViewModel: CalendarViewModel = viewModel(factory = CalendarViewModelFactory(app.database.calyendarDao()))
 
-    LaunchedEffect(year, month) {
-        calendarViewModel.loadMonth(year, month)
-    }
-
     var isImportIcsAsHoliday by remember { mutableStateOf(false) }
     val openDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -227,22 +223,22 @@ fun CalYendarApp() {
                     actions = {
                         if (currentRoute == "calendar") {
                             IconButton(onClick = {
-                                if (month == 0) {
-                                    month = 11
-                                    year--
-                                } else {
-                                    month--
-                                }
+                                val cal = Calendar.getInstance()
+                                cal.set(year, month, 1)
+                                cal.add(Calendar.MONTH, -1)
+                                val newYear = cal.get(Calendar.YEAR)
+                                val newMonth = cal.get(Calendar.MONTH)
+                                calendarViewModel.loadMonth(newYear, newMonth)
                             }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Month")
                             }
                             IconButton(onClick = {
-                                if (month == 11) {
-                                    month = 0
-                                    year++
-                                } else {
-                                    month++
-                                }
+                                val cal = Calendar.getInstance()
+                                cal.set(year, month, 1)
+                                cal.add(Calendar.MONTH, 1)
+                                val newYear = cal.get(Calendar.YEAR)
+                                val newMonth = cal.get(Calendar.MONTH)
+                                calendarViewModel.loadMonth(newYear, newMonth)
                             }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month")
                             }
@@ -293,6 +289,11 @@ fun CalYendarApp() {
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable("calendar") {
+                    val calendarUiState by calendarViewModel.uiState.collectAsState()
+                    LaunchedEffect(calendarUiState) {
+                        year = calendarUiState.year
+                        month = calendarUiState.month
+                    }
                     CalendarScreen(
                         viewModel = calendarViewModel,
                         onDayClick = { day ->
