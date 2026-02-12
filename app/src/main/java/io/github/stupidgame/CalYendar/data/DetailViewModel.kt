@@ -1,4 +1,4 @@
-package io.github.stupidgame.CalYendar.data
+package io.github.stupidgame.calyendar.data
 
 import android.app.AlarmManager
 import android.app.Application
@@ -9,7 +9,7 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import io.github.stupidgame.CalYendar.EventNotificationReceiver
+import io.github.stupidgame.calyendar.EventNotificationReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -51,21 +51,24 @@ class DetailViewModel(
 
         val currentDayDate = LocalDate.of(year, month + 1, day)
         val sortedGoals = (allGoals as List<FinancialGoal>).sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
-        val latestGoal = sortedGoals.firstOrNull { goal ->
+
+        val pastGoalsTotal = sortedGoals
+            .filter { goal ->
+                val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
+                !currentDayDate.isBefore(goalDate)
+            }
+            .sumOf { it.amount }
+
+        val balanceAfterPastGoals = transactionBalance - pastGoalsTotal
+
+        val nextGoal = sortedGoals.firstOrNull { goal ->
             val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
-            !currentDayDate.isAfter(goalDate)
+            currentDayDate.isBefore(goalDate)
         }
 
-        val finalBalance = latestGoal?.let { goal ->
-            val upcomingGoalIndex = sortedGoals.indexOf(goal)
-            if (upcomingGoalIndex != -1) {
-                val goalsToConsider = sortedGoals.subList(0, upcomingGoalIndex + 1)
-                val totalGoalCost = goalsToConsider.sumOf { it.amount }
-                transactionBalance - totalGoalCost
-            } else {
-                null
-            }
-        }
+        val finalBalance = nextGoal?.let {
+            balanceAfterPastGoals - it.amount
+        } ?: balanceAfterPastGoals
 
         val dailyIcalEvents = (importedEvents as List<ImportedEvent>).filter {
             val cal = Calendar.getInstance()
@@ -76,9 +79,9 @@ class DetailViewModel(
         }
 
         DetailUiState(
-            balance = finalBalance ?: transactionBalance,
-            transactionBalance = transactionBalance,
-            goal = latestGoal,
+            balance = finalBalance,
+            transactionBalance = balanceAfterPastGoals,
+            goal = nextGoal,
             dailyTransactions = dailyTransactions as List<Transaction>,
             events = dailyEvents as List<Event>,
             icalEvents = dailyIcalEvents

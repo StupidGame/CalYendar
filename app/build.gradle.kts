@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "io.github.stupidgame.CalYendar"
+    namespace = "io.github.stupidgame.calyendar"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "io.github.stupidgame.CalYendar"
+        applicationId = "io.github.stupidgame.calyendar"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
