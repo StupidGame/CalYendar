@@ -1,4 +1,4 @@
-package io.github.stupidgame.CalYendar
+package io.github.stupidgame.calyendar
 
 import android.app.Application
 import androidx.compose.animation.animateColorAsState
@@ -55,15 +55,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import biweekly.component.VEvent
-import io.github.stupidgame.CalYendar.data.CalYendarDao
-import io.github.stupidgame.CalYendar.data.DetailUiState
-import io.github.stupidgame.CalYendar.data.DetailViewModel
-import io.github.stupidgame.CalYendar.data.DetailViewModelFactory
-import io.github.stupidgame.CalYendar.data.Event
-import io.github.stupidgame.CalYendar.data.FinancialGoal
-import io.github.stupidgame.CalYendar.data.ImportedEvent
-import io.github.stupidgame.CalYendar.data.Transaction
-import io.github.stupidgame.CalYendar.data.TransactionType
+import io.github.stupidgame.calyendar.data.CalYendarDao
+import io.github.stupidgame.calyendar.data.DetailUiState
+import io.github.stupidgame.calyendar.data.DetailViewModel
+import io.github.stupidgame.calyendar.data.DetailViewModelFactory
+import io.github.stupidgame.calyendar.data.Event
+import io.github.stupidgame.calyendar.data.FinancialGoal
+import io.github.stupidgame.calyendar.data.ImportedEvent
+import io.github.stupidgame.calyendar.data.Transaction
+import io.github.stupidgame.calyendar.data.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
