@@ -1,12 +1,12 @@
-package io.github.stupidgame.CalYendar
+package io.github.stupidgame.calyendar
 
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import io.github.stupidgame.CalYendar.data.CalYendarDatabase
-import io.github.stupidgame.CalYendar.data.CalYendarDao
-import io.github.stupidgame.CalYendar.data.Transaction
-import io.github.stupidgame.CalYendar.data.TransactionType
+import io.github.stupidgame.calyendar.data.CalYendarDatabase
+import io.github.stupidgame.calyendar.data.CalYendarDao
+import io.github.stupidgame.calyendar.data.Transaction
+import io.github.stupidgame.calyendar.data.TransactionType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After

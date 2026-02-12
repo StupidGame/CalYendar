@@ -1,4 +1,4 @@
-package io.github.stupidgame.CalYendar
+package io.github.stupidgame.calyendar
 
 import android.app.NotificationManager
 import android.content.BroadcastReceiver

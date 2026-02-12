@@ -1,4 +1,4 @@
-package io.github.stupidgame.CalYendar.data
+package io.github.stupidgame.calyendar.data
 
 import android.app.AlarmManager
 import android.app.Application
@@ -8,7 +8,7 @@ import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import io.github.stupidgame.CalYendar.EventNotificationReceiver
+import io.github.stupidgame.calyendar.EventNotificationReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
