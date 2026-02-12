@@ -1,4 +1,4 @@
-package io.github.stupidgame.CalYendar
+package io.github.stupidgame.calyendar
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -78,12 +78,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import io.github.stupidgame.CalYendar.data.CalendarViewModel
-import io.github.stupidgame.CalYendar.data.CalendarViewModelFactory
-import io.github.stupidgame.CalYendar.data.DayState
-import io.github.stupidgame.CalYendar.data.DetailViewModel
-import io.github.stupidgame.CalYendar.data.DetailViewModelFactory
-import io.github.stupidgame.CalYendar.ui.theme.CalYendarTheme
+import io.github.stupidgame.calyendar.data.CalendarViewModel
+import io.github.stupidgame.calyendar.data.CalendarViewModelFactory
+import io.github.stupidgame.calyendar.data.DayState
+import io.github.stupidgame.calyendar.data.DetailViewModel
+import io.github.stupidgame.calyendar.data.DetailViewModelFactory
+import io.github.stupidgame.calyendar.ui.theme.CalYendarTheme
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId

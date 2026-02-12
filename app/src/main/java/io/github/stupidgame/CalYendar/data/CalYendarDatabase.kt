@@ -1,4 +1,4 @@
-package io.github.stupidgame.CalYendar.data
+package io.github.stupidgame.calyendar.data
 
 import android.content.Context
 import androidx.room.Database
