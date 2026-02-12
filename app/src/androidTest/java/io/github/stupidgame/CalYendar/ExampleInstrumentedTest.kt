@@ -1,4 +1,4 @@
-package io.github.stupidgame.CalYendar
+package io.github.stupidgame.calyendar
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("io.github.stupidgame.CalYendar", appContext.packageName)
+        assertEquals("io.github.stupidgame.calyendar", appContext.packageName)
     }
 }

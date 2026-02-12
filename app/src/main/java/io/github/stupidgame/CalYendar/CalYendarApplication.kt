@@ -1,11 +1,11 @@
-package io.github.stupidgame.CalYendar
+package io.github.stupidgame.calyendar
 
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
-import io.github.stupidgame.CalYendar.data.CalYendarDatabase
+import io.github.stupidgame.calyendar.data.CalYendarDatabase
 
 class CalYendarApplication : Application() {
     val database: CalYendarDatabase by lazy { CalYendarDatabase.getDatabase(this) }
