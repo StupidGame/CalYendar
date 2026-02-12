@@ -1,4 +1,4 @@
-package io.github.stupidgame.CalYendar.data
+package io.github.stupidgame.calyendar.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

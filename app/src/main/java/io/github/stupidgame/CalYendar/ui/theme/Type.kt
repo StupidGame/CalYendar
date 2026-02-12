@@ -1,4 +1,4 @@
-package io.github.stupidgame.CalYendar.ui.theme
+package io.github.stupidgame.calyendar.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
