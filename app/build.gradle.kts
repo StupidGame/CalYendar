@@ -22,10 +22,10 @@ android {
 
     signingConfigs {
         create("release") {
-            val ksPath = System.getenv("CARYENDAR_KEY_PATH")
+            val ksPath = System.getenv("CALYENDAR_KEY_PATH")
             val ksPass = System.getenv("KEYSTORE_PASSWORD")
             val keyAl  = "calyendar"
-            val keyPass= System.getenv("_KEY_PASSWORD")
+            val keyPass= System.getenv("KEY_PASSWORD")
 
             // 環境変数が揃っている時だけ設定（ローカル開発で未設定でもビルドできるように）
             if (!ksPath.isNullOrBlank() && !ksPass.isNullOrBlank() && !keyAl.isNullOrBlank() && !keyPass.isNullOrBlank()) {
