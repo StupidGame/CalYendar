@@ -58,9 +58,9 @@ class DetailViewModel(
         val finalBalance = latestGoal?.let { goal ->
             val upcomingGoalIndex = sortedGoals.indexOf(goal)
             if (upcomingGoalIndex != -1) {
-                val goalsToConsider = sortedGoals.subList(0, upcomingGoalIndex + 1)
-                val totalGoalCost = goalsToConsider.sumOf { it.amount }
-                transactionBalance - totalGoalCost
+                val goalsBefore = sortedGoals.subList(0, upcomingGoalIndex)
+                val costOfGoalsBefore = goalsBefore.sumOf { it.amount }
+                transactionBalance - costOfGoalsBefore - goal.amount
             } else {
                 null
             }
