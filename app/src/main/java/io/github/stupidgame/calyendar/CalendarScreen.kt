@@ -170,7 +170,6 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
     val predictionDiff = dayState.predictionDiff
 
     val cardColor = when {
-        dayState.isHoliday -> Color(0xFFF5F5F5) // Light Gray for holidays
         predictionDiff != null -> getGradientColor(predictionDiff, totalGoal)
         else -> MaterialTheme.colorScheme.surface
     }
