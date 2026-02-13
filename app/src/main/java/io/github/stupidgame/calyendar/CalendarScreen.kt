@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -203,12 +204,14 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(2.dp),
+                .padding(start = 2.dp, end = 2.dp, bottom = 2.dp, top = 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Date and Events
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Date and Events Row
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 0.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = dayState.dayOfMonth.toString(),
@@ -220,14 +223,16 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
 
                 // Events (Dot indicators)
                 if (dayState.events.isNotEmpty() || dayState.icalEvents.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(1.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         repeat(dayState.events.size) {
                             Box(modifier = Modifier.size(4.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-                            Spacer(modifier = Modifier.width(1.dp))
                         }
                         repeat(dayState.icalEvents.size) {
                             Box(modifier = Modifier.size(4.dp).background(Color.Cyan, CircleShape))
-                            Spacer(modifier = Modifier.width(1.dp))
                         }
                     }
                 }
@@ -239,45 +244,75 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
             ) {
                 // Top: Income / Expense
                 Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier.wrapContentHeight().fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter
                 ) {
                     val income = dayState.transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
                     val expense = dayState.transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (income > 0) {
-                            Text("収+%,d".format(income), color = Color(0xFF2E7D32), fontSize = 8.sp, maxLines = 1, lineHeight = 8.sp, textAlign = TextAlign.Center)
+                        val hasIncome = income > 0
+                        val hasExpense = expense > 0
+                        val both = hasIncome && hasExpense
+                        val fontSize = if (both) 6.sp else 8.sp
+                        val lineHeight = if (both) 6.sp else 8.sp
+
+                        if (hasIncome) {
+                            Text(
+                                "収+%,d".format(income), 
+                                color = Color(0xFF2E7D32), 
+                                fontSize = fontSize, 
+                                maxLines = 1, 
+                                lineHeight = lineHeight, 
+                                textAlign = TextAlign.Center
+                            )
                         }
-                        if (expense > 0) {
-                            Text("支-%,d".format(expense), color = Color(0xFFC62828), fontSize = 8.sp, maxLines = 1, lineHeight = 8.sp, textAlign = TextAlign.Center)
+                        if (hasExpense) {
+                            Text(
+                                "支-%,d".format(expense), 
+                                color = Color(0xFFC62828), 
+                                fontSize = fontSize, 
+                                maxLines = 1, 
+                                lineHeight = lineHeight, 
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
 
+                Spacer(modifier = Modifier.weight(1f).heightIn(min = 4.dp))
+
                 // Bottom: Prediction / Goal Difference
                 Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier.wrapContentHeight().fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     if (predictionDiff != null) {
                         val prefix = if (predictionDiff >= 0) "余" else "不"
                         val color = if (predictionDiff >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+                        val text = "$prefix%,d".format(predictionDiff)
+                        val fontSize = if (text.length > 7) 6.sp else 8.sp
+
                         Text(
-                            text = "$prefix%,d".format(predictionDiff),
-                            fontSize = 8.sp,
+                            text = text,
+                            fontSize = fontSize,
                             color = color,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
+                            lineHeight = fontSize,
                             textAlign = TextAlign.Center
                         )
                     } else if (dayState.goal != null) {
                         val diff = dayState.balance - dayState.goal.amount
+                        val text = "残%,d".format(diff)
+                        val fontSize = if (text.length > 7) 6.sp else 8.sp
+
                         Text(
-                            text = "残%,d".format(diff),
-                            fontSize = 8.sp,
+                            text = text,
+                            fontSize = fontSize,
                             color = if (cardColor.luminance() > 0.5f) Color.Black else Color.White,
                             maxLines = 1,
+                            lineHeight = fontSize,
                             textAlign = TextAlign.Center
                         )
                     }
