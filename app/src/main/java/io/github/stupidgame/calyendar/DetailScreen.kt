@@ -67,6 +67,8 @@ import io.github.stupidgame.calyendar.data.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
@@ -238,7 +240,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
             AddGoalDialog(
                 goal = it,
                 onDismiss = { editingGoal = null },
-                onConfirm = { name, amount ->
+                onConfirm = { name: String, amount: Long ->
                     viewModel.upsertFinancialGoal(it.copy(name = name, amount = amount))
                     editingGoal = null
                 }
@@ -252,7 +254,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                         transaction = it,
                         type = it.type,
                         onDismiss = { editingTransaction = null },
-                        onConfirm = { name, amount ->
+                        onConfirm = { name: String, amount: Long ->
                             viewModel.upsertTransaction(it.copy(name = name, amount = amount))
                             editingTransaction = null
                         }
@@ -263,7 +265,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                         transaction = it,
                         type = it.type,
                         onDismiss = { editingTransaction = null },
-                        onConfirm = { name, amount ->
+                        onConfirm = { name: String, amount: Long ->
                             viewModel.upsertTransaction(it.copy(name = name, amount = amount))
                             editingTransaction = null
                         }
@@ -280,7 +282,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 month = viewModel.month,
                 day = viewModel.day,
                 onDismiss = { editingEvent = null },
-                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes, isHoliday ->
+                onConfirm = { title: String, startDate: LocalDate, startTime: LocalTime, endDate: LocalDate, endTime: LocalTime, zoneId: ZoneId, notificationMinutes: Long, isHoliday: Boolean ->
                     val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
                     val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
                     viewModel.upsertEvent(it.copy(
@@ -302,7 +304,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
             AddGoalDialog(
                 goal = null,
                 onDismiss = { showAddGoalDialog = false },
-                onConfirm = { name, amount ->
+                onConfirm = { name: String, amount: Long ->
 
                     viewModel.upsertFinancialGoal(
                         FinancialGoal(
@@ -324,7 +326,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 transaction = null,
                 type = TransactionType.INCOME,
                 onDismiss = { showAddIncomeDialog = false },
-                onConfirm = { name, amount ->
+                onConfirm = { name: String, amount: Long ->
                     viewModel.upsertTransaction(
                         Transaction(
                             year = viewModel.year,
@@ -345,7 +347,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 transaction = null,
                 type = TransactionType.EXPENSE,
                 onDismiss = { showAddExpenseDialog = false },
-                onConfirm = { name, amount ->
+                onConfirm = { name: String, amount: Long ->
                     viewModel.upsertTransaction(
                         Transaction(
                             year = viewModel.year,
@@ -368,7 +370,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 month = viewModel.month,
                 day = viewModel.day,
                 onDismiss = { showAddEventDialog = false },
-                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes, isHoliday ->
+                onConfirm = { title: String, startDate: LocalDate, startTime: LocalTime, endDate: LocalDate, endTime: LocalTime, zoneId: ZoneId, notificationMinutes: Long, isHoliday: Boolean ->
                     val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
                     val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
                     viewModel.upsertEvent(
