@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "io.github.stupidgame.calyendar"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "io.github.stupidgame.calyendar"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -44,9 +44,6 @@ android {
         release {
             isMinifyEnabled = false
 
-            // ★追加：release署名に signingConfigs.release を使う
-            signingConfig = signingConfigs.getByName("release")
-
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -59,6 +56,9 @@ android {
     }
     kotlin {
         jvmToolchain(17)
+    }
+    buildFeatures {
+        compose = true
     }
     packagingOptions {
         resources.excludes.add("META-INF/versions/9/module-info.class")
