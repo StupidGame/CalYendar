@@ -145,7 +145,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                SummaryCard(transactionBalance = uiState.transactionBalance, finalBalance = uiState.balance, goal = uiState.goal, onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal }, onClick = {
+                SummaryCard(transactionBalance = uiState.balance, finalBalance = uiState.balance, goal = uiState.goal, onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal }, onClick = {
                     editingGoal = uiState.goal
                 })
             }
