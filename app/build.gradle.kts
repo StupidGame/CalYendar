@@ -13,7 +13,7 @@ android {
     defaultConfig {
         applicationId = "io.github.stupidgame.calyendar"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -59,9 +59,6 @@ android {
     }
     kotlin {
         jvmToolchain(17)
-    }
-    buildFeatures {
-        compose = true
     }
     packagingOptions {
         resources.excludes.add("META-INF/versions/9/module-info.class")
