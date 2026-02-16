@@ -55,16 +55,11 @@ class DetailViewModel(
             !currentDayDate.isAfter(goalDate)
         }
 
-        val finalBalance = latestGoal?.let { goal ->
-            val upcomingGoalIndex = sortedGoals.indexOf(goal)
-            if (upcomingGoalIndex != -1) {
-                val goalsBefore = sortedGoals.subList(0, upcomingGoalIndex)
-                val costOfGoalsBefore = goalsBefore.sumOf { it.amount }
-                transactionBalance - costOfGoalsBefore - goal.amount
-            } else {
-                null
-            }
+        val achievedGoals = sortedGoals.filter { goal ->
+            val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
+            goalDate.isBefore(currentDayDate)
         }
+        val finalBalance = transactionBalance - achievedGoals.sumOf { it.amount }
 
         val dailyIcalEvents = (importedEvents as List<ImportedEvent>).filter {
             val cal = Calendar.getInstance()
@@ -75,7 +70,7 @@ class DetailViewModel(
         }
 
         DetailUiState(
-            balance = finalBalance ?: transactionBalance,
+            balance = finalBalance,
             transactionBalance = transactionBalance,
             goal = latestGoal,
             dailyTransactions = dailyTransactions as List<Transaction>,
