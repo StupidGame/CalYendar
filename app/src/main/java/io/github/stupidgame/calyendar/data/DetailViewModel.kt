@@ -60,8 +60,9 @@ class DetailViewModel(
             !currentDayDate.isAfter(goalDate)
         }
 
-        val finalBalance = latestGoal?.let { goal ->
-            adjustedTransactionBalance - goal.amount
+        val remainingAfterCurrentGoal = latestGoal?.let { goal ->
+            val currentGoalCost: Long = goal.amount
+            adjustedTransactionBalance - currentGoalCost
         }
 
         val dailyIcalEvents = (importedEvents as List<ImportedEvent>).filter {
@@ -73,7 +74,7 @@ class DetailViewModel(
         }
 
         DetailUiState(
-            balance = finalBalance ?: adjustedTransactionBalance,
+            balance = remainingAfterCurrentGoal ?: adjustedTransactionBalance,
             transactionBalance = adjustedTransactionBalance,
             goal = latestGoal,
             dailyTransactions = dailyTransactions as List<Transaction>,
