@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "io.github.stupidgame.calyendar"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "io.github.stupidgame.calyendar"
@@ -43,9 +43,6 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-
-            // ★追加：release署名に signingConfigs.release を使う
-            signingConfig = signingConfigs.getByName("release")
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

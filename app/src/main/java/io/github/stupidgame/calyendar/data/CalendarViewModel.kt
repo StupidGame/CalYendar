@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import biweekly.Biweekly
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -48,14 +49,15 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
     )
     val uiState = _uiState.asStateFlow()
 
+    private var loadMonthJob: Job? = null
+
     init {
-        viewModelScope.launch {
-            loadMonth(uiState.value.year, uiState.value.month)
-        }
+        loadMonth(uiState.value.year, uiState.value.month)
     }
 
     fun loadMonth(year: Int, month: Int) {
-        viewModelScope.launch {
+        loadMonthJob?.cancel()
+        loadMonthJob = viewModelScope.launch {
             val today = LocalDate.now()
             val transactionsUpToTodayFlow = dao.getTransactionsUpToToday(today.year, today.monthValue - 1, today.dayOfMonth)
             val transactionsBeforeFlow = dao.getTransactionsUpTo(year, month)
