@@ -145,9 +145,16 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                SummaryCard(transactionBalance = uiState.balance, finalBalance = uiState.balance, goal = uiState.goal, onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal }, onClick = {
-                    editingGoal = uiState.goal
-                })
+                SummaryCard(
+                    transactionBalance = uiState.balance, 
+                    finalBalance = uiState.balance, 
+                    goal = uiState.goal, 
+                    predictionBalance = uiState.predictionBalance,
+                    onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal }, 
+                    onClick = {
+                        editingGoal = uiState.goal
+                    }
+                )
             }
 
             val holidays = uiState.events.filter { it.isHoliday } + uiState.icalEvents.filter { it.isHoliday }
@@ -394,7 +401,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SummaryCard(transactionBalance: Long, finalBalance: Long, goal: FinancialGoal?, onLongClick: () -> Unit, onClick: () -> Unit) {
+fun SummaryCard(transactionBalance: Long, finalBalance: Long, goal: FinancialGoal?, predictionBalance: Long?, onLongClick: () -> Unit, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick),
         elevation = CardDefaults.cardElevation(4.dp)
@@ -436,7 +443,7 @@ fun SummaryCard(transactionBalance: Long, finalBalance: Long, goal: FinancialGoa
                     Text(text = "達成率: %.0f".format(percentage * 100) + "%")
                     Text(text = "目標: %,d".format(goal.amount))
                 }
-                val difference = finalBalance
+                val difference = predictionBalance ?: finalBalance
                 val diffColor = when {
                     difference >= 0 -> Color(0xFF2E7D32)
                     percentage >= 0.8f -> Color(0xFFF9A825) // Dark Yellow

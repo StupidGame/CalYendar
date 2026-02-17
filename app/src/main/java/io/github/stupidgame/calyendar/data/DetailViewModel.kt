@@ -22,7 +22,8 @@ data class DetailUiState(
     val goal: FinancialGoal? = null,
     val dailyTransactions: List<Transaction> = emptyList(),
     val events: List<Event> = emptyList(),
-    val icalEvents: List<ImportedEvent> = emptyList()
+    val icalEvents: List<ImportedEvent> = emptyList(),
+    val predictionBalance: Long? = null
 )
 
 class DetailViewModel(
@@ -57,7 +58,7 @@ class DetailViewModel(
 
         val achievedGoals = sortedGoals.filter { goal ->
             val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
-            goalDate.isBefore(currentDayDate)
+            !goalDate.isAfter(currentDayDate)
         }
         val finalBalance = transactionBalance - achievedGoals.sumOf { it.amount }
 
@@ -69,13 +70,25 @@ class DetailViewModel(
             } ?: false
         }
 
+        val predictionBalance = if (latestGoal != null) {
+            val goalDate = LocalDate.of(latestGoal.year, latestGoal.month + 1, latestGoal.day)
+            if (goalDate.isAfter(currentDayDate)) {
+                finalBalance - latestGoal.amount
+            } else {
+                finalBalance
+            }
+        } else {
+            null
+        }
+
         DetailUiState(
             balance = finalBalance,
             transactionBalance = transactionBalance,
             goal = latestGoal,
             dailyTransactions = dailyTransactions as List<Transaction>,
             events = dailyEvents as List<Event>,
-            icalEvents = dailyIcalEvents
+            icalEvents = dailyIcalEvents,
+            predictionBalance = predictionBalance
         )
     }
 
