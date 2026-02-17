@@ -62,7 +62,9 @@ class DetailViewModel(
 
         val finalBalance = latestGoal?.let { goal ->
             adjustedTransactionBalance - goal.amount
+
         }
+        val finalBalance = transactionBalance - achievedGoals.sumOf { it.amount }
 
         val dailyIcalEvents = (importedEvents as List<ImportedEvent>).filter {
             val cal = Calendar.getInstance()
@@ -75,10 +77,8 @@ class DetailViewModel(
         DetailUiState(
             balance = finalBalance ?: adjustedTransactionBalance,
             transactionBalance = adjustedTransactionBalance,
-            goal = latestGoal,
-            dailyTransactions = dailyTransactions as List<Transaction>,
-            events = dailyEvents as List<Event>,
-            icalEvents = dailyIcalEvents
+            balance = finalBalance,
+            transactionBalance = transactionBalance,
         )
     }
 
