@@ -1,24 +1,18 @@
 package io.github.stupidgame.calyendar.data
 
-import android.content.Context
+import android.content.ContentResolver
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import biweekly.Biweekly
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.IOException
-import java.net.URL
 import java.time.LocalDate
 import java.util.Calendar
 
@@ -40,7 +34,7 @@ data class CalendarUiState(
     val currentBalance: Long = 0L
 )
 
-class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
+class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         Calendar.getInstance().let {
@@ -59,16 +53,14 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
         loadMonthJob?.cancel()
         loadMonthJob = viewModelScope.launch {
             val today = LocalDate.now()
-            val transactionsUpToTodayFlow = dao.getTransactionsUpToToday(today.year, today.monthValue - 1, today.dayOfMonth)
-            val transactionsBeforeFlow = dao.getTransactionsUpTo(year, month)
-
+            
             combine(
-                transactionsUpToTodayFlow,
-                transactionsBeforeFlow,
-                dao.getTransactionsForMonth(year, month),
-                dao.getEventsForMonth(year, month),
-                dao.getAllGoals(),
-                dao.getImportedEvents()
+                repository.getTransactionsUpToToday(today.year, today.monthValue - 1, today.dayOfMonth),
+                repository.getTransactionsUpTo(year, month),
+                repository.getTransactionsForMonth(year, month),
+                repository.getEventsForMonth(year, month),
+                repository.getAllGoals(),
+                repository.getImportedEvents()
             ) { values ->
                 val transactionsUpToToday = values[0] as List<Transaction>
                 val transactionsBefore = values[1] as List<Transaction>
@@ -77,23 +69,11 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                 val allGoals = values[4] as List<FinancialGoal>
                 val importedEvents = values[5] as List<ImportedEvent>
 
-                val sortedGoals = allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
+                // 今日の残高
+                val todayBalance = FinancialCalculator.calculateDailyBalance(transactionsUpToToday)
 
-                val todayBalance = transactionsUpToToday.sumOf {
-                    when (it.type) {
-                        TransactionType.INCOME -> it.amount
-                        TransactionType.EXPENSE -> -it.amount
-                        else -> 0L
-                    }
-                }
-
-                var currentBalance = transactionsBefore.sumOf {
-                    when (it.type) {
-                        TransactionType.INCOME -> it.amount
-                        TransactionType.EXPENSE -> -it.amount
-                        else -> 0L
-                    }
-                }
+                // 月初の初期残高
+                var currentBalance = FinancialCalculator.calculateDailyBalance(transactionsBefore)
 
                 val calendar = Calendar.getInstance().apply { set(year, month, 1) }
                 val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
@@ -104,20 +84,17 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                     val dailyTransactions = monthTransactions.filter { it.day == day }
                     val dailyEvents = monthEvents.filter { it.day == day }
 
-                    currentBalance += dailyTransactions.sumOf {
-                        when (it.type) {
-                            TransactionType.INCOME -> it.amount
-                            TransactionType.EXPENSE -> -it.amount
-                            else -> 0L
-                        }
-                    }
+                    // 今日の取引で残高を更新
+                    currentBalance += FinancialCalculator.calculateDailyBalance(dailyTransactions)
 
-                    val upcomingGoal = sortedGoals.firstOrNull { goal ->
-                        val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
-                        !goalDate.isBefore(currentDayDate)
-                    }
-
-                    val goalForDisplay = upcomingGoal?.let { goal ->
+                    // FinancialCalculatorによる予測ロジック
+                    // この日付に関連する「次の」目標が必要
+                    val predictionResult = FinancialCalculator.calculatePrediction(
+                         currentBalance, allGoals, currentDayDate
+                    )
+                    
+                    // 日付が過去または目標日を過ぎている場合に目標を非表示にするロジック
+                    val goalForDisplay = predictionResult.upcomingGoal?.let { goal ->
                         val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
                         if (currentDayDate.isBefore(today) || currentDayDate.isAfter(goalDate)) {
                             null
@@ -125,28 +102,20 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                             goal
                         }
                     }
+                    
+                    val predictionDiffForDisplay = if (!currentDayDate.isBefore(today)) {
+                        predictionResult.predictionDiff
+                    } else {
+                        null
+                    }
 
+                    // iCalロジック
                     val dailyIcalEvents = importedEvents.filter { ie ->
                         val cal = Calendar.getInstance()
                         ie.event.dateStart?.value?.let {
                             date -> cal.time = date
                             cal.get(Calendar.YEAR) == year && cal.get(Calendar.MONTH) == month && cal.get(Calendar.DAY_OF_MONTH) == day
                         } ?: false
-                    }
-
-                    var predictionDiff: Long? = null
-                    if (!currentDayDate.isBefore(today)) {
-                        predictionDiff = upcomingGoal?.let { goal ->
-                            val upcomingGoalIndex = sortedGoals.indexOf(goal)
-                            if (upcomingGoalIndex != -1) {
-                                // 直近ゴール以前のゴールだけ引く → 直近ゴールに使える金額
-                                val priorGoals = sortedGoals.subList(0, upcomingGoalIndex)
-                                val priorGoalsCost = priorGoals.sumOf { it.amount }
-                                currentBalance - priorGoalsCost
-                            } else {
-                                null
-                            }
-                        }
                     }
 
                     dayStates[day] = DayState(
@@ -156,7 +125,7 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                         events = dailyEvents,
                         transactions = dailyTransactions,
                         icalEvents = dailyIcalEvents,
-                        predictionDiff = predictionDiff,
+                        predictionDiff = predictionDiffForDisplay,
                         isHoliday = dailyIcalEvents.any { it.isHoliday } || dailyEvents.any { it.isHoliday }
                     )
                 }
@@ -169,64 +138,26 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
         }
     }
 
-    fun importIcs(uri: Uri, context: Context, isHoliday: Boolean, onResult: (String) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
-                context.contentResolver.openInputStream(uri)?.use {
-                    val ical = Biweekly.parse(it).first()
-                    dao.upsertImportedEvents(ical.events.map { event ->
-                        val holiday = isHoliday || event.summary?.value?.contains("休日") == true
-                        ImportedEvent(event = event, isHoliday = holiday)
-                    })
-                }
-                withContext(Dispatchers.Main) {
-                    onResult("インポートに成功しました")
-                }
-            }.onFailure {
-                Log.e("CalendarViewModel", "Failed to import ics from $uri", it)
-                withContext(Dispatchers.Main) {
-                    onResult("インポートに失敗しました")
-                }
-            }
+    fun importIcs(uri: Uri, contentResolver: ContentResolver, isHoliday: Boolean, onResult: (String) -> Unit) {
+        viewModelScope.launch {
+             val result = repository.importIcs(uri, contentResolver, isHoliday)
+             onResult(result.getOrDefault(result.exceptionOrNull()?.message ?: "Unknown error"))
         }
     }
 
     fun importWebcal(url: String, isHoliday: Boolean, onResult: (String) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
-                val client = OkHttpClient()
-                val request = Request.Builder()
-                    .url(url.replace("webcal", "https"))
-                    .build()
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
-
-                    response.body?.byteStream()?.let {
-                        val ical = Biweekly.parse(it).first()
-                        dao.upsertImportedEvents(ical.events.map { event ->
-                            val holiday = isHoliday || event.summary?.value?.contains("休日") == true
-                            ImportedEvent(event = event, isHoliday = holiday)
-                        })
-                    }
-                }
-                withContext(Dispatchers.Main) {
-                    onResult("インポートに成功しました")
-                }
-            }.onFailure {
-                Log.e("CalendarViewModel", "Failed to import webcal from $url", it)
-                withContext(Dispatchers.Main) {
-                    onResult("インポートに失敗しました")
-                }
-            }
+        viewModelScope.launch {
+            val result = repository.importWebcal(url, isHoliday)
+            onResult(result.getOrDefault(result.exceptionOrNull()?.message ?: "Unknown error"))
         }
     }
 }
 
-class CalendarViewModelFactory(private val dao: CalYendarDao) : ViewModelProvider.Factory {
+class CalendarViewModelFactory(private val repository: CalYendarRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CalendarViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return CalendarViewModel(dao) as T
+            return CalendarViewModel(repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

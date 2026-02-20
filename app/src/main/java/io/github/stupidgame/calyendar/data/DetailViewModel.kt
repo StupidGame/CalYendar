@@ -1,14 +1,10 @@
 package io.github.stupidgame.calyendar.data
 
-import android.app.AlarmManager
 import android.app.Application
-import android.app.PendingIntent
-import android.content.Context
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import io.github.stupidgame.calyendar.EventNotificationReceiver
+import io.github.stupidgame.calyendar.utils.EventNotificationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -28,38 +24,35 @@ data class DetailUiState(
 )
 
 class DetailViewModel(
-    private val application: Application,
-    private val dao: CalYendarDao,
+    private val repository: CalYendarRepository,
+    private val notificationManager: EventNotificationManager,
     val year: Int,
     val month: Int,
     val day: Int
 ) : ViewModel() {
 
     val uiState: Flow<DetailUiState> = combine(
-        dao.getTransactionsUpToDate(year, month, day),
-        dao.getAllGoals(),
-        dao.getEventsForDate(year, month, day),
-        dao.getTransactionsForDate(year, month, day),
-        dao.getImportedEvents()
+        repository.getTransactionsUpToDate(year, month, day),
+        repository.getAllGoals(),
+        repository.getEventsForDate(year, month, day),
+        repository.getTransactionsForDate(year, month, day),
+        repository.getImportedEvents()
     ) { allTransactions, allGoals, dailyEvents, dailyTransactions, importedEvents ->
-        val transactionBalance = (allTransactions as List<Transaction>).sumOf {
-            when (it.type) {
-                TransactionType.INCOME -> it.amount
-                TransactionType.EXPENSE -> -it.amount
-                else -> 0L
-            }
-        }
+        
+        // この日付までの合計残高を計算
+        val transactionBalance = FinancialCalculator.calculateDailyBalance(allTransactions)
 
         val currentDayDate = LocalDate.of(year, month + 1, day)
-        val sortedGoals = (allGoals as List<FinancialGoal>).sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
-        // カレンダーと同じロジック: 次のゴール(upcoming)を見つけて、
-        // index 0 〜 upcomingGoalIndex までの全ゴール合計をbalanceから引く
-        val upcomingGoal = sortedGoals.firstOrNull { goal ->
-            val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
-            !goalDate.isBefore(currentDayDate)
-        }
+        
+        // 予測の計算
+        val predictionResult = FinancialCalculator.calculatePrediction(
+            currentBalance = transactionBalance,
+            allGoals = allGoals,
+            currentDate = currentDayDate
+        )
 
-        val dailyIcalEvents = (importedEvents as List<ImportedEvent>).filter {
+        // この日のiCalイベント
+        val dailyIcalEvents = importedEvents.filter {
             val cal = Calendar.getInstance()
             it.event.dateStart?.value?.let {
                 date -> cal.time = date
@@ -67,122 +60,73 @@ class DetailViewModel(
             } ?: false
         }
 
-        var totalGoalCost = 0L
-        val predictionBalance = upcomingGoal?.let { goal ->
-            val upcomingGoalIndex = sortedGoals.indexOf(goal)
-            if (upcomingGoalIndex != -1) {
-                // 直近ゴール以前のゴールだけ引く → 直近ゴールに使える金額
-                val priorGoals = sortedGoals.subList(0, upcomingGoalIndex)
-                totalGoalCost = priorGoals.sumOf { it.amount }
-                transactionBalance - totalGoalCost
-            } else null
-        }
-
         DetailUiState(
             balance = transactionBalance,
-            transactionBalance = transactionBalance,
-            goal = upcomingGoal,
+            transactionBalance = transactionBalance, // 元のコードでも冗長ですが、APIを維持します
+            goal = predictionResult.upcomingGoal,
             dailyTransactions = dailyTransactions as List<Transaction>,
             events = dailyEvents as List<Event>,
             icalEvents = dailyIcalEvents,
-            predictionBalance = predictionBalance,
-            totalGoalCost = totalGoalCost
+            predictionBalance = predictionResult.predictionDiff,
+            totalGoalCost = predictionResult.totalPriorGoalCost
         )
     }
 
     fun upsertTransaction(transaction: Transaction) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.upsertTransaction(transaction)
+        viewModelScope.launch {
+            repository.upsertTransaction(transaction)
         }
     }
 
     fun deleteTransaction(transaction: Transaction) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.deleteTransaction(transaction)
+        viewModelScope.launch {
+            repository.deleteTransaction(transaction)
         }
     }
 
     fun upsertFinancialGoal(goal: FinancialGoal) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.upsertFinancialGoal(goal)
+        viewModelScope.launch {
+            repository.upsertFinancialGoal(goal)
         }
     }
 
     fun deleteFinancialGoal(goal: FinancialGoal) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.deleteFinancialGoal(goal)
+        viewModelScope.launch {
+            repository.deleteFinancialGoal(goal)
         }
     }
 
     fun upsertEvent(event: Event) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val id = dao.upsertEvent(event)
-            if (event.notificationMinutesBefore != (-1).toLong()) {
-                scheduleEventNotification(event.copy(id = id))
-            }
+        viewModelScope.launch {
+            val id = repository.upsertEvent(event)
+            // 通知の再スケジュール
+            notificationManager.scheduleEventNotification(event.copy(id = id))
         }
     }
 
     fun deleteEvent(event: Event) {
-        viewModelScope.launch(Dispatchers.IO) {
-            cancelEventNotification(event)
-            dao.deleteEvent(event)
+        viewModelScope.launch {
+            notificationManager.cancelEventNotification(event)
+            repository.deleteEvent(event)
         }
     }
 
     fun deleteImportedEvent(event: ImportedEvent) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.deleteImportedEvent(event)
+        viewModelScope.launch {
+            repository.deleteImportedEvent(event)
         }
     }
 
     fun clearImportedEvents() {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.clearImportedEvents()
+        viewModelScope.launch {
+            repository.clearImportedEvents()
         }
-    }
-
-    private fun scheduleEventNotification(event: Event) {
-        val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(application, EventNotificationReceiver::class.java).apply {
-            putExtra("event_title", event.title)
-            putExtra("event_id", event.id.toInt())
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            application,
-            event.id.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notificationTime =
-            event.startTime - (event.notificationMinutesBefore * 60 * 1000)
-
-        if (notificationTime > System.currentTimeMillis()) {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                notificationTime,
-                pendingIntent
-            )
-        }
-    }
-
-    private fun cancelEventNotification(event: Event) {
-        val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(application, EventNotificationReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
-            application,
-            event.id.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        alarmManager.cancel(pendingIntent)
     }
 }
 
 class DetailViewModelFactory(
-    private val application: Application,
-    private val dao: CalYendarDao,
+    private val repository: CalYendarRepository,
+    private val notificationManager: EventNotificationManager,
     private val year: Int,
     private val month: Int,
     private val day: Int
@@ -190,7 +134,7 @@ class DetailViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return DetailViewModel(application, dao, year, month, day) as T
+            return DetailViewModel(repository, notificationManager, year, month, day) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

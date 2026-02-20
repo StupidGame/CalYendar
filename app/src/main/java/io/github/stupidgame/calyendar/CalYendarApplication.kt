@@ -6,9 +6,11 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import io.github.stupidgame.calyendar.data.CalYendarDatabase
+import io.github.stupidgame.calyendar.data.CalYendarRepository
 
 class CalYendarApplication : Application() {
     val database: CalYendarDatabase by lazy { CalYendarDatabase.getDatabase(this) }
+    val repository: CalYendarRepository by lazy { CalYendarRepository(database.calyendarDao()) }
 
     override fun onCreate() {
         super.onCreate()
