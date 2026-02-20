@@ -146,11 +146,12 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 SummaryCard(
-                    transactionBalance = uiState.balance, 
-                    finalBalance = uiState.balance, 
-                    goal = uiState.goal, 
+                    transactionBalance = uiState.balance,
+                    finalBalance = uiState.balance,
+                    goal = uiState.goal,
                     predictionBalance = uiState.predictionBalance,
-                    onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal }, 
+                    totalGoalCost = uiState.totalGoalCost,
+                    onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal },
                     onClick = {
                         editingGoal = uiState.goal
                     }
@@ -401,27 +402,29 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SummaryCard(transactionBalance: Long, finalBalance: Long, goal: FinancialGoal?, predictionBalance: Long?, onLongClick: () -> Unit, onClick: () -> Unit) {
+fun SummaryCard(transactionBalance: Long, finalBalance: Long, goal: FinancialGoal?, predictionBalance: Long?, totalGoalCost: Long, onLongClick: () -> Unit, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "今日の時点の残高", style = MaterialTheme.typography.titleMedium)
+            val displayBalance = predictionBalance ?: transactionBalance
+            Text(text = "この日の予想残高", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "%,d".format(transactionBalance),
+                text = "%,d".format(displayBalance),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
+                color = if (displayBalance >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
             )
             Spacer(modifier = Modifier.height(16.dp))
             if (goal != null) {
-                val percentage = if (goal.amount > 0) (transactionBalance.toFloat() / goal.amount.toFloat()) else if (transactionBalance >= goal.amount) 1f else 0f
+                val percentage = if (goal.amount > 0) (displayBalance.toFloat() / goal.amount.toFloat()) else if (displayBalance >= 0) 1f else 0f
 
-                // Green if met, Yellow if close (80%), Red otherwise
+                // 達成率ベースの3色: <0% 赤, 0%-100% 黄, >=100% 緑
                 val cardColor = when {
-                    percentage >= 1f -> Color(0xFF66BB6A)
-                    percentage >= 0.8f -> Color(0xFFFFEE58)
-                    else -> Color(0xFFEF5350)
+                    percentage >= 1f -> Color(0xFFA5D6A7)   // Pastel Green
+                    percentage >= 0f -> Color(0xFFFFF9C4)   // Pastel Yellow
+                    else -> Color(0xFFEF9A9A)               // Pastel Red
                 }
 
                 Row(
@@ -443,11 +446,12 @@ fun SummaryCard(transactionBalance: Long, finalBalance: Long, goal: FinancialGoa
                     Text(text = "達成率: %.0f".format(percentage * 100) + "%")
                     Text(text = "目標: %,d".format(goal.amount))
                 }
-                val difference = predictionBalance ?: finalBalance
+                val difference = displayBalance - goal.amount
+                // 達成率ベースの3色
                 val diffColor = when {
-                    difference >= 0 -> Color(0xFF2E7D32)
-                    percentage >= 0.8f -> Color(0xFFF9A825) // Dark Yellow
-                    else -> Color.Gray
+                    percentage >= 1f -> Color(0xFF2E7D32)   // Green
+                    percentage >= 0f -> Color(0xFFF9A825)   // Dark Yellow
+                    else -> Color(0xFFEF5350)               // Red
                 }
 
                 Text(
@@ -515,7 +519,6 @@ fun IcalEventCard(event: ImportedEvent, onLongClick: () -> Unit) {
         )
     }
 }
-
 
 @Preview
 @Composable
@@ -586,7 +589,7 @@ fun DetailScreenPreview() {
         override suspend fun clearImportedEvents() {}
 
         override suspend fun deleteImportedEvent(event: ImportedEvent) {}
-        
+
         override suspend fun deleteHolidays() {}
 
     }

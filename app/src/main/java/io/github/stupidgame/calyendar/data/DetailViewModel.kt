@@ -23,7 +23,8 @@ data class DetailUiState(
     val dailyTransactions: List<Transaction> = emptyList(),
     val events: List<Event> = emptyList(),
     val icalEvents: List<ImportedEvent> = emptyList(),
-    val predictionBalance: Long? = null
+    val predictionBalance: Long? = null,
+    val totalGoalCost: Long = 0L
 )
 
 class DetailViewModel(
@@ -51,16 +52,12 @@ class DetailViewModel(
 
         val currentDayDate = LocalDate.of(year, month + 1, day)
         val sortedGoals = (allGoals as List<FinancialGoal>).sortedWith(compareBy({ it.year }, { it.month }, { it.day }))
-        val latestGoal = sortedGoals.firstOrNull { goal ->
+        // カレンダーと同じロジック: 次のゴール(upcoming)を見つけて、
+        // index 0 〜 upcomingGoalIndex までの全ゴール合計をbalanceから引く
+        val upcomingGoal = sortedGoals.firstOrNull { goal ->
             val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
-            !currentDayDate.isAfter(goalDate)
+            !goalDate.isBefore(currentDayDate)
         }
-
-        val achievedGoals = sortedGoals.filter { goal ->
-            val goalDate = LocalDate.of(goal.year, goal.month + 1, goal.day)
-            !goalDate.isAfter(currentDayDate)
-        }
-        val finalBalance = transactionBalance - achievedGoals.sumOf { it.amount }
 
         val dailyIcalEvents = (importedEvents as List<ImportedEvent>).filter {
             val cal = Calendar.getInstance()
@@ -70,25 +67,26 @@ class DetailViewModel(
             } ?: false
         }
 
-        val predictionBalance = if (latestGoal != null) {
-            val goalDate = LocalDate.of(latestGoal.year, latestGoal.month + 1, latestGoal.day)
-            if (goalDate.isAfter(currentDayDate)) {
-                finalBalance - latestGoal.amount
-            } else {
-                finalBalance
-            }
-        } else {
-            null
+        var totalGoalCost = 0L
+        val predictionBalance = upcomingGoal?.let { goal ->
+            val upcomingGoalIndex = sortedGoals.indexOf(goal)
+            if (upcomingGoalIndex != -1) {
+                // 直近ゴール以前のゴールだけ引く → 直近ゴールに使える金額
+                val priorGoals = sortedGoals.subList(0, upcomingGoalIndex)
+                totalGoalCost = priorGoals.sumOf { it.amount }
+                transactionBalance - totalGoalCost
+            } else null
         }
 
         DetailUiState(
-            balance = finalBalance,
+            balance = transactionBalance,
             transactionBalance = transactionBalance,
-            goal = latestGoal,
+            goal = upcomingGoal,
             dailyTransactions = dailyTransactions as List<Transaction>,
             events = dailyEvents as List<Event>,
             icalEvents = dailyIcalEvents,
-            predictionBalance = predictionBalance
+            predictionBalance = predictionBalance,
+            totalGoalCost = totalGoalCost
         )
     }
 
