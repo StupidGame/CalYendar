@@ -45,7 +45,7 @@ fun SettingsScreen(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            Text("カレンダーインポート", style = MaterialTheme.typography.titleMedium)
+            Text("カレンダーのインポート", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -65,7 +65,7 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = webCalUrl,
                 onValueChange = { webCalUrl = it },
-                label = { Text("WebCal URL") },
+                label = { Text("WebCalのURL") },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -79,7 +79,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Text("通知設定 (デフォルト)", style = MaterialTheme.typography.titleMedium)
+            Text("通知の設定 (デフォルト)", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             
             Row(
