@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -37,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,8 +69,6 @@ fun CalendarScreen(
         }
         val firstDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
         val emptyCells = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
-        val totalGoal = uiState.dayStates.values.mapNotNull { it.goal }.sumOf { it.amount }
-
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
             modifier = Modifier.heightIn(max = 500.dp) // Adjust max height as needed
@@ -81,7 +77,7 @@ fun CalendarScreen(
                 Box(modifier = Modifier.aspectRatio(1f))
             }
             items(uiState.dayStates.values.toList()) { day ->
-                DayCell(day, uiState.year, uiState.month, totalGoal, onClick = { onDayClick(day.dayOfMonth) })
+                DayCell(day, uiState.year, uiState.month, onClick = { onDayClick(day.dayOfMonth) })
             }
         }
 
@@ -102,7 +98,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
     val difference = uiState.currentBalance - totalGoalInMonth
 
     val cardColor by animateColorAsState(
-        targetValue = getGradientColor(difference, totalGoalInMonth),
+        targetValue = getGradientColor(uiState.currentBalance, totalGoalInMonth),
         label = ""
     )
     val contentColor = if (cardColor.luminance() > 0.5f) {
@@ -168,11 +164,13 @@ fun WeekdaysHeader() {
 }
 
 @Composable
-fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick: () -> Unit) {
+fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
     val predictionDiff = dayState.predictionDiff
 
     val cardColor = when {
-        predictionDiff != null -> getGradientColor(predictionDiff, totalGoal)
+        predictionDiff != null && dayState.goal != null -> {
+            getGradientColor(predictionDiff, dayState.goal.amount)
+        }
         else -> MaterialTheme.colorScheme.surface
     }
     val contentColor = if (cardColor.luminance() > 0.5f) Color.Black else Color.White
@@ -252,29 +250,23 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
                     val expense = dayState.transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        val hasIncome = income > 0
-                        val hasExpense = expense > 0
-                        val both = hasIncome && hasExpense
-                        val fontSize = if (both) 6.sp else 8.sp
-                        val lineHeight = if (both) 6.sp else 8.sp
-
-                        if (hasIncome) {
+                        if (income > 0) {
                             Text(
                                 "収+%,d".format(income), 
                                 color = Color(0xFF2E7D32), 
-                                fontSize = fontSize, 
+                                fontSize = 8.sp, 
                                 maxLines = 1, 
-                                lineHeight = lineHeight, 
+                                lineHeight = 8.sp, 
                                 textAlign = TextAlign.Center
                             )
                         }
-                        if (hasExpense) {
+                        if (expense > 0) {
                             Text(
                                 "支-%,d".format(expense), 
                                 color = Color(0xFFC62828), 
-                                fontSize = fontSize, 
+                                fontSize = 8.sp, 
                                 maxLines = 1, 
-                                lineHeight = lineHeight, 
+                                lineHeight = 8.sp, 
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -288,32 +280,25 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
                     modifier = Modifier.wrapContentHeight().fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (predictionDiff != null) {
-                        val prefix = if (predictionDiff >= 0) "余" else "不"
-                        val color = if (predictionDiff >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
-                        val text = "$prefix%,d".format(predictionDiff)
-                        val fontSize = if (text.length > 7) 6.sp else 8.sp
-
+                    if (predictionDiff != null && dayState.goal != null) {
+                        val surplus = predictionDiff - dayState.goal.amount
+                        val prefix = if (surplus >= 0) "余" else "不"
+                        val predictionTextColor = if (surplus >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
                         Text(
-                            text = text,
-                            fontSize = fontSize,
-                            color = color,
-                            fontWeight = FontWeight.Bold,
+                            "%s: %,d".format(prefix, kotlin.math.abs(surplus)),
+                            color = predictionTextColor,
+                            fontSize = 8.sp,
                             maxLines = 1,
-                            lineHeight = fontSize,
+                            lineHeight = 8.sp,
                             textAlign = TextAlign.Center
                         )
                     } else if (dayState.goal != null) {
-                        val diff = dayState.balance - dayState.goal.amount
-                        val text = "残%,d".format(diff)
-                        val fontSize = if (text.length > 7) 6.sp else 8.sp
-
                         Text(
-                            text = text,
-                            fontSize = fontSize,
-                            color = if (cardColor.luminance() > 0.5f) Color.Black else Color.White,
+                            "目標: %,d".format(dayState.goal.amount),
+                            color = contentColor,
+                            fontSize = 8.sp,
                             maxLines = 1,
-                            lineHeight = fontSize,
+                            lineHeight = 8.sp,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -323,23 +308,21 @@ fun DayCell(dayState: DayState, year: Int, month: Int, totalGoal: Long, onClick:
     }
 }
 
-private fun getGradientColor(difference: Long, totalGoal: Long): Color {
-    val green = Color(0xFFA5D6A7) // Light Green
-    val yellow = Color(0xFFFFF59D) // Light Yellow
-    val red = Color(0xFFEF9A9A)   // Light Red
-
-    if (totalGoal <= 0L) {
-        return if (difference >= 0) green else red
+/**
+ * 目標達成率に基づいて色を返す。
+ * rate = numerator / denominator
+ * - rate < 0%: 赤
+ * - 0% <= rate < 100%: 黄
+ * - rate >= 100%: 緑
+ */
+fun getGradientColor(numerator: Long, denominator: Long): Color {
+    if (denominator <= 0L) {
+        return if (numerator >= 0) Color(0xFFA5D6A7) else Color(0xFFEF9A9A)
     }
-
-    //黒字の場合は緑
-    if (difference >= 0) {
-        return green
+    val achievementRate = numerator.toFloat() / denominator.toFloat()
+    return when {
+        achievementRate < 0f -> Color(0xFFEF9A9A)   // Pastel Red
+        achievementRate < 1f -> Color(0xFFFFF9C4)   // Pastel Yellow
+        else -> Color(0xFFA5D6A7)                    // Pastel Green
     }
-
-    // 差額がマイナスの場合、目標額に対する割合を計算
-    // 0% (目標達成) -> 黄色, -100% (目標の2倍の赤字) -> 赤
-    val fraction = (-difference).toFloat() / totalGoal.toFloat()
-
-    return lerp(yellow, red, fraction.coerceIn(0f, 1f))
 }

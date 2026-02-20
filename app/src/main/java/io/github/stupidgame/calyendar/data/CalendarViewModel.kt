@@ -139,9 +139,10 @@ class CalendarViewModel(private val dao: CalYendarDao) : ViewModel() {
                         predictionDiff = upcomingGoal?.let { goal ->
                             val upcomingGoalIndex = sortedGoals.indexOf(goal)
                             if (upcomingGoalIndex != -1) {
-                                val goalsToConsider = sortedGoals.subList(0, upcomingGoalIndex + 1)
-                                val totalGoalCost = goalsToConsider.sumOf { it.amount }
-                                currentBalance - totalGoalCost
+                                // 直近ゴール以前のゴールだけ引く → 直近ゴールに使える金額
+                                val priorGoals = sortedGoals.subList(0, upcomingGoalIndex)
+                                val priorGoalsCost = priorGoals.sumOf { it.amount }
+                                currentBalance - priorGoalsCost
                             } else {
                                 null
                             }
