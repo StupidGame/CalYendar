@@ -39,6 +39,7 @@ import io.github.stupidgame.calyendar.data.ImportedEvent
 import io.github.stupidgame.calyendar.data.Transaction
 import io.github.stupidgame.calyendar.data.TransactionType
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.Date
 import java.util.Locale
 
@@ -51,239 +52,318 @@ fun SummaryCard(
         onLongClick: () -> Unit,
         onClick: () -> Unit
 ) {
-    Card(
-            modifier =
-                    Modifier.fillMaxWidth()
-                            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-            elevation = CardDefaults.cardElevation(4.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "現時点で使えるお金", style = MaterialTheme.typography.titleMedium)
-            val displayAmount = if (goal != null) displayBalance - goal.amount else displayBalance
-            Text(
-                    text = "%,d".format(displayAmount),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = if (displayAmount >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            if (goal != null) {
-                // 百分率を決定
-                // ロジック: (現在の残高) / (目標金額)
-                // 注: predictionBalanceを渡す場合、'displayBalance'には事前に目標が引かれている可能性がある
-                val percentage =
-                        if (goal.amount > 0) (displayBalance.toFloat() / goal.amount.toFloat())
-                        else if (displayBalance >= 0) 1f else 0f
+        Card(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+                elevation = CardDefaults.cardElevation(4.dp)
+        ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "現時点で使えるお金", style = MaterialTheme.typography.titleMedium)
+                        val displayAmount =
+                                if (goal != null) displayBalance - goal.amount else displayBalance
+                        Text(
+                                text = "%,d".format(displayAmount),
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold,
+                                color =
+                                        if (displayAmount >= 0) Color(0xFF2E7D32)
+                                        else Color(0xFFC62828)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        if (goal != null) {
+                                // 百分率を決定
+                                // ロジック: (現在の残高) / (目標金額)
+                                // 注: predictionBalanceを渡す場合、'displayBalance'には事前に目標が引かれている可能性がある
+                                val percentage =
+                                        if (goal.amount > 0)
+                                                (displayBalance.toFloat() / goal.amount.toFloat())
+                                        else if (displayBalance >= 0) 1f else 0f
 
-                val cardColor =
-                        when {
-                            percentage >= 1f -> Color(0xFFA5D6A7) // Pastel Green
-                            percentage >= 0f -> Color(0xFFFFF9C4) // Pastel Yellow
-                            else -> Color(0xFFEF9A9A) // Pastel Red
+                                val cardColor =
+                                        when {
+                                                percentage >= 1f ->
+                                                        Color(0xFFA5D6A7) // Pastel Green
+                                                percentage >= 0f ->
+                                                        Color(0xFFFFF9C4) // Pastel Yellow
+                                                else -> Color(0xFFEF9A9A) // Pastel Red
+                                        }
+
+                                Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                ) {
+                                        Icon(
+                                                Icons.Outlined.Flag,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                                text = goal.name,
+                                                style = MaterialTheme.typography.titleMedium
+                                        )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                LinearProgressIndicator(
+                                        progress = { percentage.coerceIn(0f, 1f) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = cardColor,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                        Text(text = "達成率: %.0f".format(percentage * 100) + "%")
+                                        Text(text = "目標: %,d".format(goal.amount))
+                                }
+                                val difference = displayBalance - goal.amount
+
+                                val diffColor =
+                                        when {
+                                                percentage >= 1f -> Color(0xFF2E7D32) // Green
+                                                percentage >= 0f -> Color(0xFFF9A825) // Dark Yellow
+                                                else -> Color(0xFFEF5350) // Red
+                                        }
+
+                                Text(
+                                        text =
+                                                if (difference >= 0)
+                                                        "目標日には %,d 円余ります".format(difference)
+                                                else "目標日には %,d 円足りません".format(-difference),
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = diffColor
+                                )
+                        } else {
+                                Text(
+                                        text = "目標を設定して、お金を貯めよう！",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                )
                         }
-
-                Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                            Icons.Outlined.Flag,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = goal.name, style = MaterialTheme.typography.titleMedium)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                        progress = { percentage.coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = cardColor,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = "達成率: %.0f".format(percentage * 100) + "%")
-                    Text(text = "目標: %,d".format(goal.amount))
-                }
-                val difference = displayBalance - goal.amount
-
-                val diffColor =
-                        when {
-                            percentage >= 1f -> Color(0xFF2E7D32) // Green
-                            percentage >= 0f -> Color(0xFFF9A825) // Dark Yellow
-                            else -> Color(0xFFEF5350) // Red
-                        }
-
-                Text(
-                        text =
-                                if (difference >= 0) "目標日には %,d 円余ります".format(difference)
-                                else "目標日には %,d 円足りません".format(-difference),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = diffColor
-                )
-            } else {
-                Text(
-                        text = "目標を設定して、お金を貯めよう！",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                )
-            }
         }
-    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TransactionCard(transaction: Transaction, onLongClick: () -> Unit, onClick: () -> Unit) {
-    Card(
-            modifier =
-                    Modifier.fillMaxWidth()
-                            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-    ) {
-        val (icon, color, sign) =
-                when (transaction.type) {
-                    TransactionType.INCOME ->
-                            Triple(Icons.Filled.TrendingUp, Color(0xFF2E7D32), "+")
-                    TransactionType.EXPENSE ->
-                            Triple(Icons.Filled.TrendingDown, Color(0xFFC62828), "-")
-                    TransactionType.GOAL ->
-                            Triple(Icons.Filled.Edit, MaterialTheme.colorScheme.primary, "")
-                }
+        Card(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+        ) {
+                val (icon, color, sign) =
+                        when (transaction.type) {
+                                TransactionType.INCOME ->
+                                        Triple(Icons.Filled.TrendingUp, Color(0xFF2E7D32), "+")
+                                TransactionType.EXPENSE ->
+                                        Triple(Icons.Filled.TrendingDown, Color(0xFFC62828), "-")
+                                TransactionType.GOAL ->
+                                        Triple(
+                                                Icons.Filled.Edit,
+                                                MaterialTheme.colorScheme.primary,
+                                                ""
+                                        )
+                        }
 
-        ListItem(
-                headlineContent = { Text(transaction.name) },
-                leadingContent = { Icon(icon, contentDescription = null, tint = color) },
-                trailingContent = {
-                    Text(
-                            "$sign %,d".format(transaction.amount),
-                            color = color,
-                            fontWeight = FontWeight.Bold
-                    )
-                }
-        )
-    }
+                ListItem(
+                        headlineContent = { Text(transaction.name) },
+                        leadingContent = { Icon(icon, contentDescription = null, tint = color) },
+                        trailingContent = {
+                                Text(
+                                        "$sign %,d".format(transaction.amount),
+                                        color = color,
+                                        fontWeight = FontWeight.Bold
+                                )
+                        }
+                )
+        }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EventCard(event: Event, onLongClick: () -> Unit, onClick: () -> Unit) {
-    Card(
-            modifier =
-                    Modifier.fillMaxWidth()
-                            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-    ) {
-        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val startTime = timeFormat.format(Date(event.startTime))
-        val endTime = timeFormat.format(Date(event.endTime))
+        Card(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+        ) {
+                val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                val startTime = timeFormat.format(Date(event.startTime))
+                val endTime = timeFormat.format(Date(event.endTime))
 
-        ListItem(
-                headlineContent = { Text(event.title) },
-                supportingContent = { Text("$startTime - $endTime") }
-        )
-    }
+                ListItem(
+                        headlineContent = { Text(event.title) },
+                        supportingContent = { Text("$startTime - $endTime") }
+                )
+        }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun IcalEventCard(event: ImportedEvent, onLongClick: () -> Unit) {
-    Card(
-            modifier =
-                    Modifier.fillMaxWidth()
-                            .combinedClickable(onClick = {}, onLongClick = onLongClick)
-    ) {
-        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val startTime = event.event.dateStart.value?.let { timeFormat.format(it) }
-        val endTime = event.event.dateEnd.value?.let { timeFormat.format(it) }
+        Card(
+                modifier =
+                        Modifier.fillMaxWidth()
+                                .combinedClickable(onClick = {}, onLongClick = onLongClick)
+        ) {
+                val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                val startTime = event.event.dateStart.value?.let { timeFormat.format(it) }
+                val endTime = event.event.dateEnd.value?.let { timeFormat.format(it) }
 
-        ListItem(
-                headlineContent = { Text(event.event.summary.value) },
-                supportingContent = {
-                    Text(
-                            if (startTime != null && endTime != null) "$startTime - $endTime"
-                            else "終日"
-                    )
-                }
-        )
-    }
+                ListItem(
+                        headlineContent = { Text(event.event.summary.value) },
+                        supportingContent = {
+                                Text(
+                                        if (startTime != null && endTime != null)
+                                                "$startTime - $endTime"
+                                        else "終日"
+                                )
+                        }
+                )
+        }
 }
 
 @Composable
 fun MonthlyGoalCard(uiState: CalendarUiState) {
-    val goalsInMonth =
-            uiState.dayStates
-                    .values
-                    .mapNotNull { it.goal }
-                    .filter { it.year == uiState.year && it.month == uiState.month }
-                    .distinct()
+        val goalsInMonth = uiState.goalsInMonth.distinct()
 
-    if (goalsInMonth.isEmpty()) return
-
-    val totalGoalInMonth = goalsInMonth.sumOf { it.amount }
-    val difference = uiState.currentBalance - totalGoalInMonth
-
-    val cardColor by
-            animateColorAsState(
-                    targetValue = getGradientColor(uiState.currentBalance, totalGoalInMonth),
-                    label = ""
-            )
-    val contentColor =
-            if (cardColor.luminance() > 0.5f) {
-                Color.Black
-            } else {
-                Color.White
-            }
-
-    Card(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = cardColor),
-            shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                    "今月の目標",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = contentColor
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            goalsInMonth.forEach { goal ->
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(goal.name, color = contentColor)
-                    Text("%,d".format(goal.amount), color = contentColor)
+        val totalGoalInMonth = goalsInMonth.sumOf { it.amount }
+        val isGoalsPassed =
+                if (goalsInMonth.isEmpty()) {
+                        true
+                } else {
+                        val targetDayForGoalBalance = goalsInMonth.maxByOrNull { it.day }?.day ?: 1
+                        val lastGoalDate =
+                                LocalDate.of(
+                                        uiState.year,
+                                        uiState.month + 1,
+                                        targetDayForGoalBalance
+                                )
+                        val today = LocalDate.now()
+                        lastGoalDate.isBefore(today)
                 }
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
+        val targetDayForGoalBalance = goalsInMonth.maxByOrNull { it.day }?.day ?: 1
+        val transactionsSumUpToGoal =
+                uiState.dayStates
+                        .filter { it.key <= targetDayForGoalBalance }
+                        .flatMap { it.value.transactions }
+                        .sumOf { if (it.type == TransactionType.INCOME) it.amount else -it.amount }
 
-            Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("目標合計", color = contentColor)
-                Text("%,d".format(totalGoalInMonth), color = contentColor)
-            }
-            Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("現在残高", color = contentColor)
-                Text("%,d".format(uiState.currentBalance), color = contentColor)
-            }
-            Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("差額", fontWeight = FontWeight.Bold, color = contentColor)
-                Text("%,d".format(difference), fontWeight = FontWeight.Bold, color = contentColor)
-            }
+        val projectedBalanceAtGoalDate = uiState.monthlyGoalCurrentBalance + transactionsSumUpToGoal
+
+        val difference = projectedBalanceAtGoalDate - totalGoalInMonth
+
+        val cardColor by
+                animateColorAsState(
+                        targetValue =
+                                if (isGoalsPassed) {
+                                        MaterialTheme.colorScheme.surface
+                                } else {
+                                        getGradientColor(
+                                                projectedBalanceAtGoalDate,
+                                                totalGoalInMonth
+                                        )
+                                },
+                        label = ""
+                )
+        if (goalsInMonth.isEmpty()) {
+                return // 月内に目標が１つも無い場合は何も表示しない
         }
-    }
+
+        val contentColor =
+                if (cardColor.luminance() > 0.5f) {
+                        Color.Black
+                } else {
+                        Color.White
+                }
+
+        Card(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                colors = CardDefaults.cardColors(containerColor = cardColor),
+                shape = RoundedCornerShape(16.dp)
+        ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                                if (!isGoalsPassed) "今月の目標" else "現在の状況",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = contentColor
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (!isGoalsPassed) {
+                                goalsInMonth.forEach { goal ->
+                                        Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                                Text(
+                                                        goal.name +
+                                                                " " +
+                                                                "(${goal.month + 1}月${goal.day}日)",
+                                                        color = contentColor
+                                                )
+                                                Text(
+                                                        "%,d".format(goal.amount),
+                                                        color = contentColor
+                                                )
+                                        }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                        Text("目標合計", color = contentColor)
+                                        Text("%,d".format(totalGoalInMonth), color = contentColor)
+                                }
+                        }
+
+                        val valueColor =
+                                if (difference >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
+
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                                Text(
+                                        if (!isGoalsPassed) "目標日までの合計金額" else "今いくら手元にあるか",
+                                        color = contentColor
+                                )
+                                Text(
+                                        "%,d".format(
+                                                if (!isGoalsPassed) projectedBalanceAtGoalDate
+                                                else uiState.currentBalance - totalGoalInMonth
+                                        ),
+                                        color = if (!isGoalsPassed) valueColor else contentColor,
+                                        fontWeight = FontWeight.Bold
+                                )
+                        }
+
+                        if (!isGoalsPassed) {
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                        Text(
+                                                "差額",
+                                                fontWeight = FontWeight.Bold,
+                                                color = contentColor
+                                        )
+                                        Text(
+                                                "%,d".format(difference),
+                                                fontWeight = FontWeight.Bold,
+                                                color = valueColor
+                                        )
+                                }
+                        }
+                }
+        }
 }
