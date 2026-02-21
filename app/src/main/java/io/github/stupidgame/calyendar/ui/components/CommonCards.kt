@@ -256,7 +256,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(goal.name, color = contentColor)
+                    Text(goal.name + " " + "(${goal.month + 1}月${goal.day}日)", color = contentColor)
                     Text("%,d".format(goal.amount), color = contentColor)
                 }
             }
