@@ -9,7 +9,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 
 data class DetailUiState(
@@ -101,6 +103,58 @@ class DetailViewModel(
             val id = repository.upsertEvent(event)
             // 通知の再スケジュール
             notificationManager.scheduleEventNotification(event.copy(id = id))
+        }
+    }
+
+    fun upsertEventWithRepeat(event: Event, repeatType: String, repeatUntil: LocalDate?, repeatDays: Set<Int>) {
+        viewModelScope.launch {
+            if (repeatType == "なし" || repeatUntil == null) {
+                val id = repository.upsertEvent(event)
+                notificationManager.scheduleEventNotification(event.copy(id = id))
+                return@launch
+            }
+
+            val seriesId = java.util.UUID.randomUUID().toString()
+            val eventsToInsert = mutableListOf<Event>()
+            var currentDate = LocalDate.of(event.year, event.month + 1, event.day)
+            
+            // For calculating offsets
+            val zoneId = ZoneId.systemDefault()
+            val startLocalTime = java.time.Instant.ofEpochMilli(event.startTime).atZone(zoneId).toLocalTime()
+            val endLocalTime = java.time.Instant.ofEpochMilli(event.endTime).atZone(zoneId).toLocalTime()
+
+            while (!currentDate.isAfter(repeatUntil)) {
+                val shouldAdd = when (repeatType) {
+                    "毎日" -> true
+                    "毎週" -> currentDate.dayOfWeek == LocalDate.of(event.year, event.month + 1, event.day).dayOfWeek
+                    "曜日指定" -> repeatDays.contains(currentDate.dayOfWeek.value)
+                    else -> false
+                }
+
+                if (shouldAdd) {
+                    val instanceStart = currentDate.atTime(startLocalTime).atZone(zoneId).toInstant().toEpochMilli()
+                    val instanceEnd = currentDate.atTime(endLocalTime).atZone(zoneId).toInstant().toEpochMilli()
+                    
+                    eventsToInsert.add(event.copy(
+                        id = 0, // Auto-generate new IDs
+                        year = currentDate.year,
+                        month = currentDate.monthValue - 1,
+                        day = currentDate.dayOfMonth,
+                        startTime = instanceStart,
+                        endTime = instanceEnd,
+                        seriesId = seriesId
+                    ))
+                }
+                currentDate = currentDate.plusDays(1)
+            }
+
+            // Insert all at once or individually? Wait, CalYendarDao upsertEvents doesn't return IDs easily in Room without changes.
+            // Oh, wait, upsertEvents is defined, but we need IDs to schedule notifications.
+            // Let's iterate and insert.
+            eventsToInsert.forEach { instance ->
+                val id = repository.upsertEvent(instance)
+                notificationManager.scheduleEventNotification(instance.copy(id = id))
+            }
         }
     }
 

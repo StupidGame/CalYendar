@@ -13,6 +13,8 @@ data class Event(
     val title: String,
     val startTime: Long, // Store as epoch millis
     val endTime: Long, // Store as epoch millis,
-    val notificationMinutesBefore: Long, // -1 for no notification
-    val isHoliday: Boolean = false
+    val notificationMinutesBefore: Long, // -1 for no notification (Legacy, kept for migration if needed, or we can just leave it and add others. Wait, it's better to keep it for backwards compatibility if we don't drop the column, but actually we will migrate to notifications)
+    val isHoliday: Boolean = false,
+    val seriesId: String? = null,
+    val notifications: String = "" // Comma-separated list of minutes. e.g., "30,1440"
 )

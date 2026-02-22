@@ -257,19 +257,25 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 month = viewModel.month,
                 day = viewModel.day,
                 onDismiss = { editingEvent = null },
-                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes, isHoliday ->
+                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notifications, isHoliday, repeatType, repeatUntil, repeatDays ->
                     val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
                     val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
-                    viewModel.upsertEvent(it.copy(
-                        year = startDate.year,
-                        month = startDate.monthValue - 1,
-                        day = startDate.dayOfMonth,
-                        title = title,
-                        startTime = startMillis,
-                        endTime = endMillis,
-                        notificationMinutesBefore = notificationMinutes,
-                        isHoliday = isHoliday
-                    ))
+                    viewModel.upsertEventWithRepeat(
+                        event = it.copy(
+                            year = startDate.year,
+                            month = startDate.monthValue - 1,
+                            day = startDate.dayOfMonth,
+                            title = title,
+                            startTime = startMillis,
+                            endTime = endMillis,
+                            notificationMinutesBefore = -1L,
+                            notifications = notifications.joinToString(","),
+                            isHoliday = isHoliday
+                        ),
+                        repeatType = repeatType,
+                        repeatUntil = repeatUntil,
+                        repeatDays = repeatDays
+                    )
                     editingEvent = null
                 }
             )
@@ -344,20 +350,24 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                 month = viewModel.month,
                 day = viewModel.day,
                 onDismiss = { showAddEventDialog = false },
-                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notificationMinutes, isHoliday ->
+                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notifications, isHoliday, repeatType, repeatUntil, repeatDays ->
                     val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
                     val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
-                    viewModel.upsertEvent(
-                        Event(
+                    viewModel.upsertEventWithRepeat(
+                        event = Event(
                             year = startDate.year,
                             month = startDate.monthValue - 1,
                             day = startDate.dayOfMonth,
                             title = title,
                             startTime = startMillis,
                             endTime = endMillis,
-                            notificationMinutesBefore = notificationMinutes,
+                            notificationMinutesBefore = -1L,
+                            notifications = notifications.joinToString(","),
                             isHoliday = isHoliday
-                        )
+                        ),
+                        repeatType = repeatType,
+                        repeatUntil = repeatUntil,
+                        repeatDays = repeatDays
                     )
                     showAddEventDialog = false
                 }

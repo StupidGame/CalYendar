@@ -39,6 +39,7 @@ import io.github.stupidgame.calyendar.data.ImportedEvent
 import io.github.stupidgame.calyendar.data.Transaction
 import io.github.stupidgame.calyendar.data.TransactionType
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.Date
 import java.util.Locale
 
@@ -228,29 +229,52 @@ fun IcalEventCard(event: ImportedEvent, onLongClick: () -> Unit) {
 
 @Composable
 fun MonthlyGoalCard(uiState: CalendarUiState) {
-        val goalsInMonth =
-                uiState.dayStates
-                        .values
-                        .mapNotNull { it.goal }
-                        .filter { it.year == uiState.year && it.month == uiState.month }
-                        .distinct()
+        val goalsInMonth = uiState.goalsInMonth.distinct()
 
         val totalGoalInMonth = goalsInMonth.sumOf { it.amount }
-        val difference = uiState.monthlyGoalCurrentBalance - totalGoalInMonth
+        val isGoalsPassed =
+                if (goalsInMonth.isEmpty()) {
+                        true
+                } else {
+                        val targetDayForGoalBalance = goalsInMonth.maxByOrNull { it.day }?.day ?: 1
+                        val lastGoalDate =
+                                LocalDate.of(
+                                        uiState.year,
+                                        uiState.month + 1,
+                                        targetDayForGoalBalance
+                                )
+                        val today = LocalDate.now()
+                        lastGoalDate.isBefore(today)
+                }
+
+        val targetDayForGoalBalance = goalsInMonth.maxByOrNull { it.day }?.day ?: 1
+        val transactionsSumUpToGoal =
+                uiState.dayStates
+                        .filter { it.key <= targetDayForGoalBalance }
+                        .flatMap { it.value.transactions }
+                        .sumOf { if (it.type == TransactionType.INCOME) it.amount else -it.amount }
+
+        val projectedBalanceAtGoalDate = uiState.monthlyGoalCurrentBalance + transactionsSumUpToGoal
+
+        val difference = projectedBalanceAtGoalDate - totalGoalInMonth
 
         val cardColor by
                 animateColorAsState(
                         targetValue =
-                                if (goalsInMonth.isEmpty()) {
+                                if (isGoalsPassed) {
                                         MaterialTheme.colorScheme.surface
                                 } else {
                                         getGradientColor(
-                                                uiState.monthlyGoalCurrentBalance,
+                                                projectedBalanceAtGoalDate,
                                                 totalGoalInMonth
                                         )
                                 },
                         label = ""
                 )
+        if (goalsInMonth.isEmpty()) {
+                return // 月内に目標が１つも無い場合は何も表示しない
+        }
+
         val contentColor =
                 if (cardColor.luminance() > 0.5f) {
                         Color.Black
@@ -265,14 +289,14 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
         ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                                if (goalsInMonth.isNotEmpty()) "今月の目標" else "現在の状況",
+                                if (!isGoalsPassed) "今月の目標" else "現在の状況",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = contentColor
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        if (goalsInMonth.isNotEmpty()) {
+                        if (!isGoalsPassed) {
                                 goalsInMonth.forEach { goal ->
                                         Row(
                                                 modifier = Modifier.fillMaxWidth(),
@@ -310,14 +334,35 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                 horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                                 Text(
-                                        if (goalsInMonth.isNotEmpty()) "現在残高" else "現在手元にあるお金",
+                                        if (!isGoalsPassed) "目標日までの合計金額" else "今いくら手元にあるか",
                                         color = contentColor
                                 )
                                 Text(
-                                        "%,d".format(uiState.monthlyGoalCurrentBalance),
-                                        color = valueColor,
+                                        "%,d".format(
+                                                if (!isGoalsPassed) projectedBalanceAtGoalDate
+                                                else uiState.currentBalance - totalGoalInMonth
+                                        ),
+                                        color = if (!isGoalsPassed) valueColor else contentColor,
                                         fontWeight = FontWeight.Bold
                                 )
+                        }
+
+                        if (!isGoalsPassed) {
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                        Text(
+                                                "差額",
+                                                fontWeight = FontWeight.Bold,
+                                                color = contentColor
+                                        )
+                                        Text(
+                                                "%,d".format(difference),
+                                                fontWeight = FontWeight.Bold,
+                                                color = valueColor
+                                        )
+                                }
                         }
                 }
         }
