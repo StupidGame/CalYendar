@@ -1,13 +1,23 @@
 package io.github.stupidgame.calyendar
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
@@ -16,6 +26,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -30,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 import io.github.stupidgame.calyendar.data.Event
 import java.time.Instant
@@ -38,7 +50,21 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class)
+fun formatNotificationLabel(minutes: Long): String {
+    return when(minutes) {
+        -1L -> "なし"
+        30L -> "30分前"
+        60L -> "1時間前"
+        1440L -> "1日前"
+        else -> {
+            if (minutes > 0 && minutes % (24 * 60) == 0L) "${minutes / (24 * 60)}日前"
+            else if (minutes > 0 && minutes % 60 == 0L) "${minutes / 60}時間前"
+            else "${minutes}分前"
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddEventDialog(
     event: Event?,
@@ -46,7 +72,19 @@ fun AddEventDialog(
     month: Int,
     day: Int,
     onDismiss: () -> Unit,
-    onConfirm: (title: String, startDate: LocalDate, startTime: LocalTime, endDate: LocalDate, endTime: LocalTime, zoneId: ZoneId, notificationMinutes: Long, isHoliday: Boolean) -> Unit
+    onConfirm: (
+        title: String,
+        startDate: LocalDate,
+        startTime: LocalTime,
+        endDate: LocalDate,
+        endTime: LocalTime,
+        zoneId: ZoneId,
+        notifications: List<Long>,
+        isHoliday: Boolean,
+        repeatType: String,
+        repeatUntil: LocalDate?,
+        repeatDays: Set<Int>
+    ) -> Unit
 ) {
     var title by remember { mutableStateOf(event?.title ?: "") }
     val initialStartDate = event?.let { Instant.ofEpochMilli(it.startTime).atZone(ZoneId.systemDefault()).toLocalDate() } ?: LocalDate.of(year, month + 1, day)
@@ -66,29 +104,54 @@ fun AddEventDialog(
     var showTimePicker by remember { mutableStateOf(false) }
     var editingStartDate by remember { mutableStateOf(false) }
 
-    var notificationMinutes by remember { mutableStateOf(event?.notificationMinutesBefore ?: -1L) }
-    val notificationOptions = remember {
-        listOf(
-            -1L to "なし",
-            30L to "30分前",
-            60L to "1時間前",
-            1440L to "1日前",
-            -2L to "カスタム"
+    // Notifications state
+    var notifications: List<Long> by remember {
+        mutableStateOf(
+            if (event != null && event.notifications.isNotBlank()) {
+                event.notifications.split(",").mapNotNull { it.toLongOrNull() }
+            } else if (event != null && event.notificationMinutesBefore != -1L) {
+                listOf(event.notificationMinutesBefore)
+            } else {
+                emptyList()
+            }
         )
     }
+
+    val notificationOptions = remember {
+        listOf(
+            30L to "30分前",
+            60L to "1時間前",
+            1440L to "1日前"
+        )
+    }
+    
     var notificationDropDownExpanded by remember { mutableStateOf(false) }
+    var selectedStandardNotification by remember { mutableStateOf<Long?>(null) }
     var customNotificationValue by remember { mutableStateOf("1") }
     var customNotificationUnit by remember { mutableStateOf("分") }
     val customNotificationUnits = remember { listOf("分", "時間", "日") }
     var customUnitDropDownExpanded by remember { mutableStateOf(false) }
+
     var isHoliday by remember { mutableStateOf(event?.isHoliday ?: false) }
 
+    // Repeat state
+    var repeatType by remember { mutableStateOf("なし") }
+    val repeatOptions = listOf("なし", "毎日", "毎週", "曜日指定")
+    var repeatDropDownExpanded by remember { mutableStateOf(false) }
+
+    var repeatUntil by remember { mutableStateOf(startDate.plusYears(1)) }
+    var showRepeatUntilPicker by remember { mutableStateOf(false) }
+
+    val daysOfWeek = listOf("月", "火", "水", "木", "金", "土", "日")
+    var selectedDays by remember { mutableStateOf(setOf<Int>()) }
+
+    val scrollState = rememberScrollState()
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (event == null) "イベントを追加" else "イベントを編集") },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(scrollState)) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -169,37 +232,80 @@ fun AddEventDialog(
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.height(16.dp))
-                ExposedDropdownMenuBox(
-                    expanded = notificationDropDownExpanded,
-                    onExpandedChange = { notificationDropDownExpanded = !notificationDropDownExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = notificationOptions.find { it.first == notificationMinutes }?.second ?: "カスタム",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("通知") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = notificationDropDownExpanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
+                Text("通知", style = MaterialTheme.typography.titleMedium)
+                if (notifications.isNotEmpty()) {
+                    FlowRow(modifier = Modifier.fillMaxWidth()) {
+                        notifications.forEach { minutes ->
+                            AssistChip(
+                                onClick = { notifications = notifications.filter { it != minutes } },
+                                label = { Text(formatNotificationLabel(minutes)) },
+                                trailingIcon = { Icon(Icons.Default.Close, contentDescription = "削除", modifier = Modifier.size(16.dp)) },
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ExposedDropdownMenuBox(
                         expanded = notificationDropDownExpanded,
-                        onDismissRequest = { notificationDropDownExpanded = false }
+                        onExpandedChange = { notificationDropDownExpanded = !notificationDropDownExpanded },
+                        modifier = Modifier.weight(1f)
                     ) {
-                        notificationOptions.forEach { (minutes, label) ->
+                        OutlinedTextField(
+                            value = selectedStandardNotification?.let { formatNotificationLabel(it) } ?: "カスタム",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("通知を追加") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = notificationDropDownExpanded) },
+                            modifier = Modifier.menuAnchor()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = notificationDropDownExpanded,
+                            onDismissRequest = { notificationDropDownExpanded = false }
+                        ) {
+                            notificationOptions.forEach { (minutes, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        selectedStandardNotification = minutes
+                                        notificationDropDownExpanded = false
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
-                                text = { Text(label) },
+                                text = { Text("カスタム") },
                                 onClick = {
-                                    notificationMinutes = minutes
+                                    selectedStandardNotification = null
                                     notificationDropDownExpanded = false
                                 }
                             )
                         }
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = {
+                        val minutesToAdd = if (selectedStandardNotification != null) {
+                            selectedStandardNotification!!
+                        } else {
+                            val value = customNotificationValue.toLongOrNull() ?: 0
+                            when (customNotificationUnit) {
+                                "分" -> value
+                                "時間" -> value * 60
+                                "日" -> value * 60 * 24
+                                else -> 0L
+                            }
+                        }
+                        if (minutesToAdd > 0 && !notifications.contains(minutesToAdd)) {
+                            notifications = notifications + minutesToAdd
+                        }
+                    }) {
+                        Text("追加")
+                    }
                 }
-                if (notificationMinutes == -2L) {
+
+                if (selectedStandardNotification == null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
@@ -238,6 +344,66 @@ fun AddEventDialog(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("繰り返し", style = MaterialTheme.typography.titleMedium)
+                ExposedDropdownMenuBox(
+                    expanded = repeatDropDownExpanded,
+                    onExpandedChange = { repeatDropDownExpanded = !repeatDropDownExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = repeatType,
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = repeatDropDownExpanded) },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = repeatDropDownExpanded,
+                        onDismissRequest = { repeatDropDownExpanded = false }
+                    ) {
+                        repeatOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    repeatType = option
+                                    repeatDropDownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (repeatType == "曜日指定") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow {
+                        daysOfWeek.forEachIndexed { index, dayName ->
+                            val dayInt = index + 1
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable {
+                                selectedDays = if (selectedDays.contains(dayInt)) selectedDays - dayInt else selectedDays + dayInt
+                            }) {
+                                Checkbox(checked = selectedDays.contains(dayInt), onCheckedChange = {
+                                    selectedDays = if (it) selectedDays + dayInt else selectedDays - dayInt
+                                })
+                                Text(dayName, modifier = Modifier.padding(end = 8.dp))
+                            }
+                        }
+                    }
+                }
+
+                if (repeatType != "なし") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("繰り返し終了日", style = MaterialTheme.typography.labelSmall)
+                    OutlinedButton(
+                        onClick = { showRepeatUntilPicker = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(repeatUntil.format(DateTimeFormatter.ISO_LOCAL_DATE))
+                    }
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { isHoliday = !isHoliday }) {
                     Checkbox(checked = isHoliday, onCheckedChange = { isHoliday = it })
                     Text("休日として作成")
@@ -247,20 +413,9 @@ fun AddEventDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val finalNotificationMinutes = if (notificationMinutes == -2L) {
-                        val value = customNotificationValue.toLongOrNull() ?: 0
-                        when (customNotificationUnit) {
-                            "分" -> value
-                            "時間" -> value * 60
-                            "日" -> value * 60 * 24
-                            else -> -1L
-                        }
-                    } else {
-                        notificationMinutes
-                    }
-                    onConfirm(title, startDate, startTime, endDate, endTime, zoneId, finalNotificationMinutes, isHoliday)
+                    onConfirm(title, startDate, startTime, endDate, endTime, zoneId, notifications, isHoliday, repeatType, repeatUntil, selectedDays)
                 },
-                enabled = title.isNotBlank()
+                enabled = title.isNotBlank() && (repeatType != "曜日指定" || selectedDays.isNotEmpty())
             ) {
                 Text("保存")
             }
@@ -293,6 +448,30 @@ fun AddEventDialog(
             },
             dismissButton = {
                 Button(onClick = { showDatePicker = false }) {
+                    Text("キャンセル")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showRepeatUntilPicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = repeatUntil.atStartOfDay(zoneId).toInstant().toEpochMilli())
+        DatePickerDialog(
+            onDismissRequest = { showRepeatUntilPicker = false },
+            confirmButton = {
+                Button(onClick = {
+                    showRepeatUntilPicker = false
+                    datePickerState.selectedDateMillis?.let {
+                        repeatUntil = Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
+                    }
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showRepeatUntilPicker = false }) {
                     Text("キャンセル")
                 }
             }

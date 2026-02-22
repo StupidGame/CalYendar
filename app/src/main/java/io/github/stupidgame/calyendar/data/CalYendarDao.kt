@@ -44,6 +44,9 @@ interface CalYendarDao {
     @Upsert
     suspend fun upsertEvent(event: Event): Long
 
+    @Upsert
+    suspend fun upsertEvents(events: List<Event>)
+
     @Delete
     suspend fun deleteEvent(event: Event)
 

@@ -13,38 +13,72 @@ class EventNotificationManager(private val context: Context) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     fun scheduleEventNotification(event: Event) {
-        if (event.notificationMinutesBefore == -1L) return
-
-        val intent = Intent(context, EventNotificationReceiver::class.java).apply {
-            putExtra("event_title", event.title)
-            putExtra("event_id", event.id.toInt())
+        val notificationList = mutableListOf<Long>()
+        if (event.notifications.isNotBlank()) {
+            event.notifications.split(",").mapNotNull { it.toLongOrNull() }.let { notificationList.addAll(it) }
+        } else if (event.notificationMinutesBefore != -1L) {
+            notificationList.add(event.notificationMinutesBefore)
         }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            event.id.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
 
-        val notificationTime = event.startTime - (event.notificationMinutesBefore * 60 * 1000)
+        if (notificationList.isEmpty()) return
 
-        if (notificationTime > System.currentTimeMillis()) {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                notificationTime,
-                pendingIntent
+        notificationList.forEachIndexed { index, minutes ->
+            if (minutes < 0) return@forEachIndexed
+
+            val intent = Intent(context, EventNotificationReceiver::class.java).apply {
+                putExtra("event_title", event.title)
+                putExtra("event_id", event.id.toInt())
+            }
+            // Use index to keep pending intents unique for multiple alarms on the same event
+            val requestCode = (event.id.toInt() * 100) + index
+            
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
+
+            val notificationTime = event.startTime - (minutes * 60 * 1000)
+
+            if (notificationTime > System.currentTimeMillis()) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    notificationTime,
+                    pendingIntent
+                )
+            }
         }
     }
 
     fun cancelEventNotification(event: Event) {
-        val intent = Intent(context, EventNotificationReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
+        val notificationList = mutableListOf<Long>()
+        if (event.notifications.isNotBlank()) {
+            event.notifications.split(",").mapNotNull { it.toLongOrNull() }.let { notificationList.addAll(it) }
+        } else if (event.notificationMinutesBefore != -1L) {
+            notificationList.add(event.notificationMinutesBefore)
+        }
+
+        // Cancel standard one just in case the old code was used
+        val standardIntent = Intent(context, EventNotificationReceiver::class.java)
+        val standardPendingIntent = PendingIntent.getBroadcast(
             context,
             event.id.toInt(),
-            intent,
+            standardIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        alarmManager.cancel(pendingIntent)
+        alarmManager.cancel(standardPendingIntent)
+
+        notificationList.forEachIndexed { index, _ ->
+            val intent = Intent(context, EventNotificationReceiver::class.java)
+            val requestCode = (event.id.toInt() * 100) + index
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.cancel(pendingIntent)
+        }
     }
 }
