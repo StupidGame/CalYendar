@@ -137,7 +137,9 @@ fun SummaryCard(
                                 )
                         } else {
                                 Text(
-                                        text = "目標を設定して、お金を貯めよう！",
+                                        text =
+                                                if (totalGoalCost > 0L) "目標はすべて達成しました！"
+                                                else "目標を設定して、お金を貯めよう！",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.primary
                                 )
@@ -228,15 +230,52 @@ fun IcalEventCard(event: ImportedEvent, onLongClick: () -> Unit) {
 
 @Composable
 fun MonthlyGoalCard(uiState: CalendarUiState) {
-        val goalsInMonth =
-                uiState.dayStates
-                        .values
-                        .mapNotNull { it.goal }
-                        .filter { it.year == uiState.year && it.month == uiState.month }
-                        .distinct()
+        val monthGoals = uiState.monthGoals
+        val activeMonthGoals = uiState.activeMonthGoals
 
-        if (goalsInMonth.isEmpty()) return
+        if (monthGoals.isEmpty()) return
 
+        if (activeMonthGoals.isEmpty()) {
+                val availableMoney = uiState.todayBalance
+                val cardColor = if (availableMoney >= 0) Color(0xFFA5D6A7) else Color(0xFFEF9A9A)
+                val contentColor = if (cardColor.luminance() > 0.5f) Color.Black else Color.White
+
+                Card(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = cardColor),
+                        shape = RoundedCornerShape(16.dp)
+                ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                        "今月の目標はすべて達成しました！",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = contentColor
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        Text(
+                                                "現時点で使えるお金",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = contentColor
+                                        )
+                                        Text(
+                                                "%,d 円".format(availableMoney),
+                                                style = MaterialTheme.typography.headlineMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = contentColor
+                                        )
+                                }
+                        }
+                }
+                return
+        }
+
+        val goalsInMonth = activeMonthGoals
         val totalGoalInMonth = goalsInMonth.sumOf { it.amount }
         val difference = uiState.currentBalance - totalGoalInMonth
 
@@ -316,6 +355,35 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                         color = contentColor
                                 )
                         }
+                }
+        }
+}
+
+@Composable
+fun CurrentBalanceCard(balance: Long) {
+        val cardColor = if (balance >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
+        Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = cardColor),
+                shape = RoundedCornerShape(16.dp)
+        ) {
+                Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        Text(
+                                "現時点の所持金",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                        )
+                        Text(
+                                "%,d 円".format(balance),
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                        )
                 }
         }
 }
