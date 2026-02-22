@@ -29,9 +29,10 @@ data class CalendarUiState(
         val month: Int,
         val dayStates: Map<Int, DayState> = emptyMap(),
         val currentBalance: Long = 0L,
-        val monthlyGoalCurrentBalance: Long = 0L,
-        val moneyOnHandToday: Long = 0L,
-        val goalsInMonth: List<FinancialGoal> = emptyList()
+        val todayBalance: Long = 0L,
+        val monthGoals: List<FinancialGoal> = emptyList(),
+        val activeMonthGoals: List<FinancialGoal> = emptyList(),
+        val availableMoneyAfterMonthGoals: Long = 0L
 )
 
 class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel() {
@@ -81,23 +82,17 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                                         transactionsUpToToday
                                                 )
 
-                                        // 月初の初期残高 (前月末時点の総残高)
+                                        // 月初の初期残高
                                         var currentBalance =
                                                 FinancialCalculator.calculateDailyBalance(
                                                         transactionsBefore
                                                 )
-                                        val startOfMonthBalance = currentBalance
 
                                         val calendar =
                                                 Calendar.getInstance().apply { set(year, month, 1) }
                                         val daysInMonth =
                                                 calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
                                         val dayStates = mutableMapOf<Int, DayState>()
-
-                                        val goalsInMonth =
-                                                allGoals.filter {
-                                                        it.year == year && it.month == month
-                                                }
 
                                         for (day in 1..daysInMonth) {
                                                 val currentDayDate =
@@ -191,72 +186,80 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                                         )
                                         }
 
-                                        // 前月以前の目標合計
-                                        val priorGoalsTotal =
+                                        // 表示月までの総残高
+                                        val totalMonthBalance =
+                                                FinancialCalculator.calculateDailyBalance(
+                                                        transactionsBefore
+                                                ) +
+                                                        FinancialCalculator.calculateDailyBalance(
+                                                                monthTransactions
+                                                        )
+                                        // 表示月より前の（過去の）すべての目標の合計
+                                        val priorGoals =
+                                                allGoals.filter { goal ->
+                                                        val goalDate =
+                                                                LocalDate.of(
+                                                                        goal.year,
+                                                                        goal.month + 1,
+                                                                        goal.day
+                                                                )
+                                                        goalDate.isBefore(
+                                                                LocalDate.of(year, month + 1, 1)
+                                                        )
+                                                }
+                                        val totalPriorGoalCost = priorGoals.sumOf { it.amount }
+                                        // 今月の目標カードに表示する「現在残高」（表示月までの全残高から過去のゴール分を引いた額）
+                                        val displayedCurrentBalance =
+                                                totalMonthBalance - totalPriorGoalCost
+
+                                        val monthGoals =
+                                                allGoals.filter {
+                                                        it.year == year && it.month == month
+                                                }
+                                        val activeMonthGoals =
+                                                monthGoals.filter { goal ->
+                                                        val goalDate =
+                                                                LocalDate.of(
+                                                                        goal.year,
+                                                                        goal.month + 1,
+                                                                        goal.day
+                                                                )
+                                                        !goalDate.isBefore(today)
+                                                }
+
+                                        // 表示月までのすべての目標（表示月の目標をすべて含む）の合計
+                                        val pastAndMonthGoalsCost =
                                                 allGoals
-                                                        .filter {
-                                                                it.year < year ||
-                                                                        (it.year == year &&
-                                                                                it.month < month)
+                                                        .filter { goal ->
+                                                                val goalDate =
+                                                                        LocalDate.of(
+                                                                                goal.year,
+                                                                                goal.month + 1,
+                                                                                goal.day
+                                                                        )
+                                                                goalDate.isBefore(
+                                                                        LocalDate.of(
+                                                                                        year,
+                                                                                        month + 1,
+                                                                                        1
+                                                                                )
+                                                                                .plusMonths(1)
+                                                                )
                                                         }
                                                         .sumOf { it.amount }
 
-                                        // 前月の最後の目標日以降の月末までの「前の月の残りの収支」を計算する
-                                        val goalsInPreviousMonth =
-                                                allGoals.filter {
-                                                        if (month == 0) {
-                                                                it.year == year - 1 &&
-                                                                        it.month == 11
-                                                        } else {
-                                                                it.year == year &&
-                                                                        it.month == month - 1
-                                                        }
-                                                }
-
-                                        val lastGoalDateInPreviousMonth =
-                                                goalsInPreviousMonth.maxByOrNull { it.day }?.day
-                                                        ?: 1
-
-                                        // 前月の最終目標日の翌日から、当月の対象日(または月末)までの収支は別で足し合わせる必要はなく、
-                                        // 実際には 「前月末時点の総残高(startOfMonthBalance) -
-                                        // 前月までの目標合計(priorGoalsTotal)」 が
-                                        // 「前月の最後の目標日までに達成した差額 ＋ それ以降の月末までの収支」 と全く同じ値になる。
-
-                                        val finalMonthlyGoalCurrentBalance =
-                                                startOfMonthBalance - priorGoalsTotal
+                                        val availableMoneyAfterMonthGoals =
+                                                totalMonthBalance - pastAndMonthGoalsCost
 
                                         CalendarUiState(
                                                 year,
                                                 month,
                                                 dayStates,
+                                                displayedCurrentBalance,
                                                 todayBalance,
-                                                finalMonthlyGoalCurrentBalance,
-                                                todayBalance -
-                                                        (priorGoalsTotal +
-                                                                goalsInMonth
-                                                                        .filter {
-                                                                                LocalDate.of(
-                                                                                                it.year,
-                                                                                                it.month +
-                                                                                                        1,
-                                                                                                it.day
-                                                                                        )
-                                                                                        .isBefore(
-                                                                                                today
-                                                                                        ) ||
-                                                                                        LocalDate
-                                                                                                .of(
-                                                                                                        it.year,
-                                                                                                        it.month +
-                                                                                                                1,
-                                                                                                        it.day
-                                                                                                )
-                                                                                                .isEqual(
-                                                                                                        today
-                                                                                                )
-                                                                        }
-                                                                        .sumOf { it.amount }),
-                                                goalsInMonth = goalsInMonth
+                                                monthGoals,
+                                                activeMonthGoals,
+                                                availableMoneyAfterMonthGoals
                                         )
                                 }
                                         .collect { calendarUiState ->
