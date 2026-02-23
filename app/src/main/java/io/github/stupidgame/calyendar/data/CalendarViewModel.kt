@@ -32,7 +32,9 @@ data class CalendarUiState(
         val todayBalance: Long = 0L,
         val monthGoals: List<FinancialGoal> = emptyList(),
         val activeMonthGoals: List<FinancialGoal> = emptyList(),
-        val availableMoneyAfterMonthGoals: Long = 0L
+        val availableMoneyAfterMonthGoals: Long = 0L,
+        val isCurrentMonth: Boolean = false,
+        val hasTransactions: Boolean = false
 )
 
 class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel() {
@@ -81,6 +83,13 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                                 FinancialCalculator.calculateDailyBalance(
                                                         transactionsUpToToday
                                                 )
+
+                                        val isCurrentMonth =
+                                                year == today.year && month == today.monthValue - 1
+                                        val hasTransactions =
+                                                transactionsBefore.isNotEmpty() ||
+                                                        monthTransactions.isNotEmpty() ||
+                                                        transactionsUpToToday.isNotEmpty()
 
                                         // 月初の初期残高
                                         var currentBalance =
@@ -194,23 +203,6 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                                         FinancialCalculator.calculateDailyBalance(
                                                                 monthTransactions
                                                         )
-                                        // 表示月より前の（過去の）すべての目標の合計
-                                        val priorGoals =
-                                                allGoals.filter { goal ->
-                                                        val goalDate =
-                                                                LocalDate.of(
-                                                                        goal.year,
-                                                                        goal.month + 1,
-                                                                        goal.day
-                                                                )
-                                                        goalDate.isBefore(
-                                                                LocalDate.of(year, month + 1, 1)
-                                                        )
-                                                }
-                                        val totalPriorGoalCost = priorGoals.sumOf { it.amount }
-                                        // 今月の目標カードに表示する「現在残高」（表示月までの全残高から過去のゴール分を引いた額）
-                                        val displayedCurrentBalance =
-                                                totalMonthBalance - totalPriorGoalCost
 
                                         val monthGoals =
                                                 allGoals.filter {
@@ -226,6 +218,41 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                                                 )
                                                         !goalDate.isBefore(today)
                                                 }
+
+                                        // その月の最後の目標日（アクティブな目標がない場合は月末）
+                                        val lastGoalDay =
+                                                activeMonthGoals.maxOfOrNull { it.day }
+                                                        ?: daysInMonth
+
+                                        // 先月末時点での最終残高 + その月の最後の目標日までの収支
+                                        val balanceUpToLastGoal =
+                                                FinancialCalculator.calculateDailyBalance(
+                                                        transactionsBefore
+                                                ) +
+                                                        FinancialCalculator.calculateDailyBalance(
+                                                                monthTransactions.filter {
+                                                                        it.day <= lastGoalDay
+                                                                }
+                                                        )
+
+                                        // 表示月より前の（過去の）すべての目標の合計
+                                        val priorGoals =
+                                                allGoals.filter { goal ->
+                                                        val goalDate =
+                                                                LocalDate.of(
+                                                                        goal.year,
+                                                                        goal.month + 1,
+                                                                        goal.day
+                                                                )
+                                                        goalDate.isBefore(
+                                                                LocalDate.of(year, month + 1, 1)
+                                                        )
+                                                }
+                                        val totalPriorGoalCost = priorGoals.sumOf { it.amount }
+
+                                        // 今月の目標カードに表示する「最後の目標までの残高」
+                                        val displayedCurrentBalance =
+                                                balanceUpToLastGoal - totalPriorGoalCost
 
                                         // 表示月までのすべての目標（表示月の目標をすべて含む）の合計
                                         val pastAndMonthGoalsCost =
@@ -252,14 +279,17 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                                 totalMonthBalance - pastAndMonthGoalsCost
 
                                         CalendarUiState(
-                                                year,
-                                                month,
-                                                dayStates,
-                                                displayedCurrentBalance,
-                                                todayBalance,
-                                                monthGoals,
-                                                activeMonthGoals,
-                                                availableMoneyAfterMonthGoals
+                                                year = year,
+                                                month = month,
+                                                dayStates = dayStates,
+                                                currentBalance = displayedCurrentBalance,
+                                                todayBalance = todayBalance,
+                                                monthGoals = monthGoals,
+                                                activeMonthGoals = activeMonthGoals,
+                                                availableMoneyAfterMonthGoals =
+                                                        availableMoneyAfterMonthGoals,
+                                                isCurrentMonth = isCurrentMonth,
+                                                hasTransactions = hasTransactions
                                         )
                                 }
                                         .collect { calendarUiState ->
