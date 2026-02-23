@@ -233,10 +233,47 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
         val monthGoals = uiState.monthGoals
         val activeMonthGoals = uiState.activeMonthGoals
 
-        if (monthGoals.isEmpty()) return
+        if (monthGoals.isEmpty()) {
+                if (uiState.hasTransactions) { // 現在月でなくても、取引履歴があれば表示
+                        val availableMoney =
+                                if (uiState.isCurrentMonth) uiState.todayBalance
+                                else uiState.currentBalance
+                        val cardColor =
+                                if (availableMoney >= 0) Color(0xFFA5D6A7) else Color(0xFFEF9A9A)
+                        val contentColor =
+                                if (cardColor.luminance() > 0.5f) Color.Black else Color.White
+
+                        Card(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = cardColor),
+                                shape = RoundedCornerShape(16.dp)
+                        ) {
+                                Row(
+                                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        Text(
+                                                "現時点で使えるお金",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = contentColor
+                                        )
+                                        Text(
+                                                "%,d 円".format(availableMoney),
+                                                style = MaterialTheme.typography.headlineMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = contentColor
+                                        )
+                                }
+                        }
+                }
+                return
+        }
 
         if (activeMonthGoals.isEmpty()) {
-                val availableMoney = uiState.todayBalance
+                val availableMoney =
+                        if (uiState.isCurrentMonth) uiState.todayBalance else uiState.currentBalance
                 val cardColor = if (availableMoney >= 0) Color(0xFFA5D6A7) else Color(0xFFEF9A9A)
                 val contentColor = if (cardColor.luminance() > 0.5f) Color.Black else Color.White
 
@@ -333,7 +370,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                                Text("現在残高", color = contentColor)
+                                Text("最後の目標までの残高", color = contentColor)
                                 val balanceColor =
                                         if (uiState.currentBalance >= totalGoalInMonth)
                                                 Color(0xFF2E7D32)
