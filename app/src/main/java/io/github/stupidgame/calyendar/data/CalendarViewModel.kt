@@ -32,7 +32,9 @@ data class CalendarUiState(
         val todayBalance: Long = 0L,
         val monthGoals: List<FinancialGoal> = emptyList(),
         val activeMonthGoals: List<FinancialGoal> = emptyList(),
-        val availableMoneyAfterMonthGoals: Long = 0L
+        val availableMoneyAfterMonthGoals: Long = 0L,
+        val hasTransactions: Boolean = false,
+        val isCurrentMonth: Boolean = false
 )
 
 class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel() {
@@ -268,6 +270,10 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                         val availableMoneyAfterMonthGoals =
                                                 totalMonthBalance - pastAndMonthGoalsCost
 
+                                        val isCurrentMonth =
+                                                year == today.year && month == today.monthValue - 1
+                                        val hasTransactions = monthTransactions.isNotEmpty()
+
                                         CalendarUiState(
                                                 year,
                                                 month,
@@ -276,7 +282,9 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                                 todayBalance,
                                                 monthGoals,
                                                 activeMonthGoals,
-                                                availableMoneyAfterMonthGoals
+                                                availableMoneyAfterMonthGoals,
+                                                hasTransactions,
+                                                isCurrentMonth
                                         )
                                 }
                                         .collect { calendarUiState ->
