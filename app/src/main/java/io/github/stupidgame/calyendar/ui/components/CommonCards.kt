@@ -367,7 +367,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                                Text("現在残高", color = contentColor)
+                                Text("最後の目標までの残高", color = contentColor)
                                 val balanceColor =
                                         if (uiState.currentBalance >= totalGoalInMonth)
                                                 Color(0xFF2E7D32)
