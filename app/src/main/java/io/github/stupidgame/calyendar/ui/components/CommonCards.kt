@@ -58,7 +58,7 @@ fun SummaryCard(
                 elevation = CardDefaults.cardElevation(4.dp)
         ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "現時点で使えるお金", style = MaterialTheme.typography.titleMedium)
+                        Text(text = "現在の所持金額", style = MaterialTheme.typography.titleMedium)
                         val displayAmount =
                                 if (goal != null) displayBalance - goal.amount else displayBalance
                         Text(
@@ -254,7 +254,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
                                         Text(
-                                                "現時点での所持金",
+                                                "現時点で使えるお金",
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = contentColor
