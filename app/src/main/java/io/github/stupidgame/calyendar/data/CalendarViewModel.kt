@@ -32,7 +32,9 @@ data class CalendarUiState(
         val todayBalance: Long = 0L,
         val monthGoals: List<FinancialGoal> = emptyList(),
         val activeMonthGoals: List<FinancialGoal> = emptyList(),
-        val availableMoneyAfterMonthGoals: Long = 0L
+        val availableMoneyAfterMonthGoals: Long = 0L,
+        val isCurrentMonth: Boolean = false,
+        val hasTransactions: Boolean = false
 )
 
 class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel() {
@@ -81,6 +83,13 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                                 FinancialCalculator.calculateDailyBalance(
                                                         transactionsUpToToday
                                                 )
+
+                                        val isCurrentMonth =
+                                                year == today.year && month == today.monthValue - 1
+                                        val hasTransactions =
+                                                transactionsBefore.isNotEmpty() ||
+                                                        monthTransactions.isNotEmpty() ||
+                                                        transactionsUpToToday.isNotEmpty()
 
                                         // 月初の初期残高
                                         var currentBalance =
@@ -252,14 +261,17 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                                                 totalMonthBalance - pastAndMonthGoalsCost
 
                                         CalendarUiState(
-                                                year,
-                                                month,
-                                                dayStates,
-                                                displayedCurrentBalance,
-                                                todayBalance,
-                                                monthGoals,
-                                                activeMonthGoals,
-                                                availableMoneyAfterMonthGoals
+                                                year = year,
+                                                month = month,
+                                                dayStates = dayStates,
+                                                currentBalance = displayedCurrentBalance,
+                                                todayBalance = todayBalance,
+                                                monthGoals = monthGoals,
+                                                activeMonthGoals = activeMonthGoals,
+                                                availableMoneyAfterMonthGoals =
+                                                        availableMoneyAfterMonthGoals,
+                                                isCurrentMonth = isCurrentMonth,
+                                                hasTransactions = hasTransactions
                                         )
                                 }
                                         .collect { calendarUiState ->
