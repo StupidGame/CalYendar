@@ -254,7 +254,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
                                         Text(
-                                                "現時点で使えるお金",
+                                                "現在の所持金額",
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = contentColor
