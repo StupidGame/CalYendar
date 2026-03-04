@@ -29,11 +29,10 @@ import io.github.stupidgame.calyendar.data.CalendarViewModel
 @Composable
 fun SettingsScreen(
     calendarViewModel: CalendarViewModel,
-    onImportIcsClick: (Boolean) -> Unit
+    onImportIcsClick: () -> Unit
 ) {
     val context = LocalContext.current
     var webCalUrl by remember { mutableStateOf("") }
-    var importAsHoliday by remember { mutableStateOf(false) }
     var notificationOneDayBefore by remember { mutableStateOf(true) }
     var notificationOneHourBefore by remember { mutableStateOf(false) }
 
@@ -51,13 +50,8 @@ fun SettingsScreen(
             Text("カレンダーのインポート", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Switch(checked = importAsHoliday, onCheckedChange = { importAsHoliday = it })
-                Text("休日としてインポート")
-            }
-            
             Button(
-                onClick = { onImportIcsClick(importAsHoliday) },
+                onClick = { onImportIcsClick() },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("iCalファイル (.ics) をインポート")
@@ -74,7 +68,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-                    calendarViewModel.importWebcal(webCalUrl, importAsHoliday) { message ->
+                    calendarViewModel.importWebcal(webCalUrl) { message ->
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     }
                 },

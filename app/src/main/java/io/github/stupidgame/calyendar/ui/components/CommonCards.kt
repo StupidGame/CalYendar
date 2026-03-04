@@ -212,11 +212,11 @@ fun IcalEventCard(event: ImportedEvent, onLongClick: () -> Unit) {
                                 .combinedClickable(onClick = {}, onLongClick = onLongClick)
         ) {
                 val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-                val startTime = event.event.dateStart.value?.let { timeFormat.format(it) }
-                val endTime = event.event.dateEnd.value?.let { timeFormat.format(it) }
+                val startTime = event.event.dateStart?.value?.let { timeFormat.format(it) }
+                val endTime = event.event.dateEnd?.value?.let { timeFormat.format(it) }
 
                 ListItem(
-                        headlineContent = { Text(event.event.summary.value) },
+                        headlineContent = { Text(event.event.summary?.value ?: "") },
                         supportingContent = {
                                 Text(
                                         if (startTime != null && endTime != null)
