@@ -90,7 +90,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                             is Transaction -> viewModel.deleteTransaction(item)
                             is FinancialGoal -> viewModel.deleteFinancialGoal(item)
                             is Event -> viewModel.deleteEvent(item)
-                            is ImportedEvent -> viewModel.deleteImportedEvent(item)
+                            is ImportedEvent -> if (!item.isHoliday) viewModel.deleteImportedEvent(item)
                         }
                         showDeleteDialog = null
                     }
@@ -154,7 +154,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                         is Event -> EventCard(event = it, onLongClick = { showDeleteDialog = it }) {
                             editingEvent = it
                         }
-                        is ImportedEvent -> IcalEventCard(event = it, onLongClick = { showDeleteDialog = it })
+                        is ImportedEvent -> IcalEventCard(event = it, onLongClick = {})
                     }
                 }
             }

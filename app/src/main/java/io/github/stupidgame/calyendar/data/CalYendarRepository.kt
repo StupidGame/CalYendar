@@ -4,12 +4,17 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.util.Log
 import biweekly.Biweekly
+import biweekly.component.VEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONObject
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class CalYendarRepository(private val dao: CalYendarDao) {
 
@@ -55,8 +60,44 @@ class CalYendarRepository(private val dao: CalYendarDao) {
     suspend fun deleteImportedEvent(event: ImportedEvent) = dao.deleteImportedEvent(event)
     suspend fun clearImportedEvents() = dao.clearImportedEvents()
 
+    // 祝日API取得ロジック
+    suspend fun fetchJapaneseHolidays() {
+        withContext(Dispatchers.IO) {
+            try {
+                val client = OkHttpClient()
+                val request = Request.Builder()
+                    .url("https://holidays-jp.github.io/api/v1/date.json")
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext
+
+                    val json = JSONObject(response.body?.string() ?: return@withContext)
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.JAPAN).apply {
+                        timeZone = TimeZone.getTimeZone("Asia/Tokyo")
+                    }
+
+                    val holidays = json.keys().asSequence().mapNotNull { dateStr ->
+                        val name = json.getString(dateStr)
+                        val date = dateFormat.parse(dateStr) ?: return@mapNotNull null
+                        val vEvent = VEvent().apply {
+                            setSummary(name)
+                            setDateStart(date)
+                        }
+                        ImportedEvent(event = vEvent, isHoliday = true)
+                    }.toList()
+
+                    dao.deleteHolidays()
+                    dao.upsertImportedEvents(holidays)
+                }
+            } catch (e: Exception) {
+                Log.e("CalYendar", "祝日の取得に失敗しました", e)
+            }
+        }
+    }
+
     // インポートロジック (ViewModelから移動)
-    suspend fun importIcs(uri: Uri, contentResolver: ContentResolver, isHoliday: Boolean): Result<String> {
+    suspend fun importIcs(uri: Uri, contentResolver: ContentResolver): Result<String> {
         return withContext(Dispatchers.IO) {
             runCatching {
                 contentResolver.openInputStream(uri)?.use { inputStream ->
@@ -64,8 +105,7 @@ class CalYendarRepository(private val dao: CalYendarDao) {
                     if (ical == null) throw IOException("Failed to parse iCal")
                     
                     val events = ical.events.map { event ->
-                        val holiday = isHoliday || event.summary?.value?.contains("休日") == true
-                        ImportedEvent(event = event, isHoliday = holiday)
+                        ImportedEvent(event = event, isHoliday = false)
                     }
                     dao.upsertImportedEvents(events)
                     "インポートに成功しました"
@@ -74,7 +114,7 @@ class CalYendarRepository(private val dao: CalYendarDao) {
         }
     }
 
-    suspend fun importWebcal(url: String, isHoliday: Boolean): Result<String> {
+    suspend fun importWebcal(url: String): Result<String> {
         return withContext(Dispatchers.IO) {
             runCatching {
                 val client = OkHttpClient()
@@ -90,8 +130,7 @@ class CalYendarRepository(private val dao: CalYendarDao) {
                     if (ical == null) throw IOException("Failed to parse iCal")
 
                     val events = ical.events.map { event ->
-                        val holiday = isHoliday || event.summary?.value?.contains("休日") == true
-                        ImportedEvent(event = event, isHoliday = holiday)
+                        ImportedEvent(event = event, isHoliday = false)
                     }
                     dao.upsertImportedEvents(events)
                     "インポートに成功しました"
