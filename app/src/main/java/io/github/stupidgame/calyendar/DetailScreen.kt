@@ -5,10 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
@@ -55,9 +52,6 @@ import io.github.stupidgame.calyendar.ui.components.IcalEventCard
 import io.github.stupidgame.calyendar.ui.components.SummaryCard
 import io.github.stupidgame.calyendar.ui.components.TransactionCard
 import io.github.stupidgame.calyendar.utils.EventNotificationManager
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -80,89 +74,84 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
 
     if (showDeleteDialog != null) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = null },
-            title = { Text("削除の確認") },
-            text = { Text("この項目を削除してもよろしいですか？") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        when (val item = showDeleteDialog) {
-                            is Transaction -> viewModel.deleteTransaction(item)
-                            is FinancialGoal -> viewModel.deleteFinancialGoal(item)
-                            is Event -> viewModel.deleteEvent(item)
-                            is ImportedEvent -> viewModel.deleteImportedEvent(item)
-                        }
-                        showDeleteDialog = null
-                    }
-                ) {
-                    Text("削除")
+                onDismissRequest = { showDeleteDialog = null },
+                title = { Text("削除の確認") },
+                text = { Text("この項目を削除してもよろしいですか？") },
+                confirmButton = {
+                    TextButton(
+                            onClick = {
+                                when (val item = showDeleteDialog) {
+                                    is Transaction -> viewModel.deleteTransaction(item)
+                                    is FinancialGoal -> viewModel.deleteFinancialGoal(item)
+                                    is Event -> viewModel.deleteEvent(item)
+                                    is ImportedEvent -> viewModel.deleteImportedEvent(item)
+                                }
+                                showDeleteDialog = null
+                            }
+                    ) { Text("削除") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = null }) { Text("キャンセル") }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("キャンセル")
-                }
-            }
         )
     }
 
     Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showBottomSheet = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "追加")
+            floatingActionButton = {
+                FloatingActionButton(onClick = { showBottomSheet = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = "追加")
+                }
             }
-        }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = innerPadding.calculateTopPadding() + 16.dp,
-                bottom = innerPadding.calculateBottomPadding() + 88.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding =
+                        PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = innerPadding.calculateTopPadding() + 16.dp,
+                                bottom = innerPadding.calculateBottomPadding() + 88.dp
+                        ),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
                 Text(
-                    text = "$year/${month + 1}/$day",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                        text = "$year/${month + 1}/$day",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 SummaryCard(
-                    displayBalance = uiState.predictionBalance ?: uiState.transactionBalance,
-                    goal = uiState.goal,
-                    totalGoalCost = uiState.totalGoalCost,
-                    onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal },
-                    onClick = {
-                        editingGoal = uiState.goal
-                    }
+                        displayBalance = uiState.predictionBalance ?: uiState.transactionBalance,
+                        goal = uiState.goal,
+                        totalGoalCost = uiState.totalGoalCost,
+                        onLongClick = { if (uiState.goal != null) showDeleteDialog = uiState.goal },
+                        onClick = { editingGoal = uiState.goal }
                 )
             }
 
-            val holidays = uiState.events.filter { it.isHoliday } + uiState.icalEvents.filter { it.isHoliday }
+            val holidays =
+                    uiState.events.filter { it.isHoliday } +
+                            uiState.icalEvents.filter { it.isHoliday }
             val regularEvents = uiState.events.filter { !it.isHoliday }
             val regularIcalEvents = uiState.icalEvents.filter { !it.isHoliday }
 
             if (holidays.isNotEmpty()) {
-                item {
-                    Text("休日", style = MaterialTheme.typography.titleLarge)
-                }
+                item { Text("休日", style = MaterialTheme.typography.titleLarge) }
                 items(holidays) {
                     when (it) {
-                        is Event -> EventCard(event = it, onLongClick = { showDeleteDialog = it }) {
-                            editingEvent = it
-                        }
-                        is ImportedEvent -> IcalEventCard(event = it, onLongClick = { showDeleteDialog = it })
+                        is Event ->
+                                EventCard(event = it, onLongClick = { showDeleteDialog = it }) {
+                                    editingEvent = it
+                                }
+                        is ImportedEvent ->
+                                IcalEventCard(event = it, onLongClick = { showDeleteDialog = it })
                     }
                 }
             }
 
             if (regularEvents.isNotEmpty()) {
-                item {
-                    Text("イベント", style = MaterialTheme.typography.titleLarge)
-                }
+                item { Text("イベント", style = MaterialTheme.typography.titleLarge) }
                 items(regularEvents) { event ->
                     EventCard(event = event, onLongClick = { showDeleteDialog = event }) {
                         editingEvent = event
@@ -171,9 +160,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
             }
 
             if (regularIcalEvents.isNotEmpty()) {
-                item {
-                    Text("インポートしたイベント", style = MaterialTheme.typography.titleLarge)
-                }
+                item { Text("インポートしたイベント", style = MaterialTheme.typography.titleLarge) }
                 items(regularIcalEvents) { event ->
                     IcalEventCard(event = event, onLongClick = { showDeleteDialog = event })
                 }
@@ -185,43 +172,72 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     Text("取引", style = MaterialTheme.typography.titleLarge)
                 }
                 items(uiState.dailyTransactions) { transaction ->
-                    TransactionCard(transaction = transaction, onLongClick = { showDeleteDialog = transaction }) {
-                        editingTransaction = transaction
-                    }
+                    TransactionCard(
+                            transaction = transaction,
+                            onLongClick = { showDeleteDialog = transaction }
+                    ) { editingTransaction = transaction }
                 }
             }
         }
 
         if (showBottomSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showBottomSheet = false },
-                sheetState = sheetState
+                    onDismissRequest = { showBottomSheet = false },
+                    sheetState = sheetState
             ) {
                 Column(modifier = Modifier.padding(bottom = 32.dp)) {
                     ListItem(
-                        headlineContent = { Text("目標を編集") },
-                        leadingContent = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                        modifier = Modifier.clickable { showAddGoalDialog = true; showBottomSheet = false }
+                            headlineContent = { Text("目標を追加") },
+                            leadingContent = { Icon(Icons.Filled.Add, contentDescription = null) },
+                            modifier =
+                                    Modifier.clickable {
+                                        showAddGoalDialog = true
+                                        showBottomSheet = false
+                                    }
                     )
                     ListItem(
-                        headlineContent = { Text("収入を追加") },
-                        leadingContent = { Icon(Icons.Filled.TrendingUp, contentDescription = null) },
-                        modifier = Modifier.clickable { showAddIncomeDialog = true; showBottomSheet = false }
+                            headlineContent = { Text("収入を追加") },
+                            leadingContent = {
+                                Icon(Icons.Filled.TrendingUp, contentDescription = null)
+                            },
+                            modifier =
+                                    Modifier.clickable {
+                                        showAddIncomeDialog = true
+                                        showBottomSheet = false
+                                    }
                     )
                     ListItem(
-                        headlineContent = { Text("支出を追加") },
-                        leadingContent = { Icon(Icons.Filled.TrendingDown, contentDescription = null) },
-                        modifier = Modifier.clickable { showAddExpenseDialog = true; showBottomSheet = false }
+                            headlineContent = { Text("支出を追加") },
+                            leadingContent = {
+                                Icon(Icons.Filled.TrendingDown, contentDescription = null)
+                            },
+                            modifier =
+                                    Modifier.clickable {
+                                        showAddExpenseDialog = true
+                                        showBottomSheet = false
+                                    }
                     )
                     ListItem(
-                        headlineContent = { Text("イベントを追加") },
-                        leadingContent = { Icon(Icons.Filled.Event, contentDescription = null) },
-                        modifier = Modifier.clickable { showAddEventDialog = true; showBottomSheet = false }
+                            headlineContent = { Text("イベントを追加") },
+                            leadingContent = {
+                                Icon(Icons.Filled.Event, contentDescription = null)
+                            },
+                            modifier =
+                                    Modifier.clickable {
+                                        showAddEventDialog = true
+                                        showBottomSheet = false
+                                    }
                     )
                     ListItem(
-                        headlineContent = { Text("インポートしたイベントを削除") },
-                        leadingContent = { Icon(Icons.Filled.Delete, contentDescription = null) },
-                        modifier = Modifier.clickable { viewModel.clearImportedEvents(); showBottomSheet = false }
+                            headlineContent = { Text("インポートしたイベントを削除") },
+                            leadingContent = {
+                                Icon(Icons.Filled.Delete, contentDescription = null)
+                            },
+                            modifier =
+                                    Modifier.clickable {
+                                        viewModel.clearImportedEvents()
+                                        showBottomSheet = false
+                                    }
                     )
                 }
             }
@@ -229,148 +245,184 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
 
         editingGoal?.let {
             AddGoalDialog(
-                goal = it,
-                onDismiss = { editingGoal = null },
-                onConfirm = { name: String, amount: Long ->
-                    viewModel.upsertFinancialGoal(it.copy(name = name, amount = amount))
-                    editingGoal = null
-                }
+                    goal = it,
+                    onDismiss = { editingGoal = null },
+                    onConfirm = { name: String, amount: Long ->
+                        viewModel.upsertFinancialGoal(it.copy(name = name, amount = amount))
+                        editingGoal = null
+                    }
             )
         }
 
         editingTransaction?.let {
             AddTransactionDialog(
-                transaction = it,
-                type = it.type,
-                onDismiss = { editingTransaction = null },
-                onConfirm = { name: String, amount: Long ->
-                    viewModel.upsertTransaction(it.copy(name = name, amount = amount))
-                    editingTransaction = null
-                }
+                    transaction = it,
+                    type = it.type,
+                    onDismiss = { editingTransaction = null },
+                    onConfirm = { name: String, amount: Long ->
+                        viewModel.upsertTransaction(it.copy(name = name, amount = amount))
+                        editingTransaction = null
+                    }
             )
         }
 
         editingEvent?.let {
             AddEventDialog(
-                event = it,
-                year = viewModel.year,
-                month = viewModel.month,
-                day = viewModel.day,
-                onDismiss = { editingEvent = null },
-                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notifications, isHoliday, repeatType, repeatUntil, repeatDays ->
-                    val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
-                    val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
-                    viewModel.upsertEventWithRepeat(
-                        event = it.copy(
-                            year = startDate.year,
-                            month = startDate.monthValue - 1,
-                            day = startDate.dayOfMonth,
-                            title = title,
-                            startTime = startMillis,
-                            endTime = endMillis,
-                            notificationMinutesBefore = -1L,
-                            notifications = notifications.joinToString(","),
-                            isHoliday = isHoliday
-                        ),
-                        repeatType = repeatType,
-                        repeatUntil = repeatUntil,
-                        repeatDays = repeatDays
-                    )
-                    editingEvent = null
-                }
+                    event = it,
+                    year = viewModel.year,
+                    month = viewModel.month,
+                    day = viewModel.day,
+                    onDismiss = { editingEvent = null },
+                    onConfirm = {
+                            title,
+                            startDate,
+                            startTime,
+                            endDate,
+                            endTime,
+                            zoneId,
+                            notifications,
+                            isHoliday,
+                            repeatType,
+                            repeatUntil,
+                            repeatDays ->
+                        val startMillis =
+                                startDate
+                                        .atTime(startTime)
+                                        .atZone(zoneId)
+                                        .toInstant()
+                                        .toEpochMilli()
+                        val endMillis =
+                                endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
+                        viewModel.upsertEventWithRepeat(
+                                event =
+                                        it.copy(
+                                                year = startDate.year,
+                                                month = startDate.monthValue - 1,
+                                                day = startDate.dayOfMonth,
+                                                title = title,
+                                                startTime = startMillis,
+                                                endTime = endMillis,
+                                                notificationMinutesBefore = -1L,
+                                                notifications = notifications.joinToString(","),
+                                                isHoliday = isHoliday
+                                        ),
+                                repeatType = repeatType,
+                                repeatUntil = repeatUntil,
+                                repeatDays = repeatDays
+                        )
+                        editingEvent = null
+                    }
             )
         }
 
         if (showAddGoalDialog) {
             AddGoalDialog(
-                goal = null,
-                onDismiss = { showAddGoalDialog = false },
-                onConfirm = { name: String, amount: Long ->
-                    viewModel.upsertFinancialGoal(
-                        FinancialGoal(
-                            id = uiState.goal?.id ?: 0,
-                            year = viewModel.year,
-                            month = viewModel.month,
-                            day = viewModel.day,
-                            name = name,
-                            amount = amount
+                    goal = null,
+                    onDismiss = { showAddGoalDialog = false },
+                    onConfirm = { name: String, amount: Long ->
+                        viewModel.upsertFinancialGoal(
+                                FinancialGoal(
+                                        id = 0,
+                                        year = viewModel.year,
+                                        month = viewModel.month,
+                                        day = viewModel.day,
+                                        name = name,
+                                        amount = amount
+                                )
                         )
-                    )
-                    showAddGoalDialog = false
-                }
+                        showAddGoalDialog = false
+                    }
             )
         }
 
         if (showAddIncomeDialog) {
             AddTransactionDialog(
-                transaction = null,
-                type = TransactionType.INCOME,
-                onDismiss = { showAddIncomeDialog = false },
-                onConfirm = { name: String, amount: Long ->
-                    viewModel.upsertTransaction(
-                        Transaction(
-                            year = viewModel.year,
-                            month = viewModel.month,
-                            day = viewModel.day,
-                            type = TransactionType.INCOME,
-                            name = name,
-                            amount = amount
+                    transaction = null,
+                    type = TransactionType.INCOME,
+                    onDismiss = { showAddIncomeDialog = false },
+                    onConfirm = { name: String, amount: Long ->
+                        viewModel.upsertTransaction(
+                                Transaction(
+                                        year = viewModel.year,
+                                        month = viewModel.month,
+                                        day = viewModel.day,
+                                        type = TransactionType.INCOME,
+                                        name = name,
+                                        amount = amount
+                                )
                         )
-                    )
-                    showAddIncomeDialog = false
-                }
+                        showAddIncomeDialog = false
+                    }
             )
         }
 
         if (showAddExpenseDialog) {
             AddTransactionDialog(
-                transaction = null,
-                type = TransactionType.EXPENSE,
-                onDismiss = { showAddExpenseDialog = false },
-                onConfirm = { name: String, amount: Long ->
-                    viewModel.upsertTransaction(
-                        Transaction(
-                            year = viewModel.year,
-                            month = viewModel.month,
-                            day = viewModel.day,
-                            type = TransactionType.EXPENSE,
-                            name = name,
-                            amount = amount
+                    transaction = null,
+                    type = TransactionType.EXPENSE,
+                    onDismiss = { showAddExpenseDialog = false },
+                    onConfirm = { name: String, amount: Long ->
+                        viewModel.upsertTransaction(
+                                Transaction(
+                                        year = viewModel.year,
+                                        month = viewModel.month,
+                                        day = viewModel.day,
+                                        type = TransactionType.EXPENSE,
+                                        name = name,
+                                        amount = amount
+                                )
                         )
-                    )
-                    showAddExpenseDialog = false
-                }
+                        showAddExpenseDialog = false
+                    }
             )
         }
 
         if (showAddEventDialog) {
             AddEventDialog(
-                event = null,
-                year = viewModel.year,
-                month = viewModel.month,
-                day = viewModel.day,
-                onDismiss = { showAddEventDialog = false },
-                onConfirm = { title, startDate, startTime, endDate, endTime, zoneId, notifications, isHoliday, repeatType, repeatUntil, repeatDays ->
-                    val startMillis = startDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli()
-                    val endMillis = endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
-                    viewModel.upsertEventWithRepeat(
-                        event = Event(
-                            year = startDate.year,
-                            month = startDate.monthValue - 1,
-                            day = startDate.dayOfMonth,
-                            title = title,
-                            startTime = startMillis,
-                            endTime = endMillis,
-                            notificationMinutesBefore = -1L,
-                            notifications = notifications.joinToString(","),
-                            isHoliday = isHoliday
-                        ),
-                        repeatType = repeatType,
-                        repeatUntil = repeatUntil,
-                        repeatDays = repeatDays
-                    )
-                    showAddEventDialog = false
-                }
+                    event = null,
+                    year = viewModel.year,
+                    month = viewModel.month,
+                    day = viewModel.day,
+                    onDismiss = { showAddEventDialog = false },
+                    onConfirm = {
+                            title,
+                            startDate,
+                            startTime,
+                            endDate,
+                            endTime,
+                            zoneId,
+                            notifications,
+                            isHoliday,
+                            repeatType,
+                            repeatUntil,
+                            repeatDays ->
+                        val startMillis =
+                                startDate
+                                        .atTime(startTime)
+                                        .atZone(zoneId)
+                                        .toInstant()
+                                        .toEpochMilli()
+                        val endMillis =
+                                endDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli()
+                        viewModel.upsertEventWithRepeat(
+                                event =
+                                        Event(
+                                                year = startDate.year,
+                                                month = startDate.monthValue - 1,
+                                                day = startDate.dayOfMonth,
+                                                title = title,
+                                                startTime = startMillis,
+                                                endTime = endMillis,
+                                                notificationMinutesBefore = -1L,
+                                                notifications = notifications.joinToString(","),
+                                                isHoliday = isHoliday
+                                        ),
+                                repeatType = repeatType,
+                                repeatUntil = repeatUntil,
+                                repeatDays = repeatDays
+                        )
+                        showAddEventDialog = false
+                    }
             )
         }
     }
@@ -381,12 +433,16 @@ fun RealDetailScreen(year: Int, month: Int, day: Int) {
     val context = LocalContext.current
     val application = context.applicationContext as CalYendarApplication
     val notificationManager = remember { EventNotificationManager(context) }
-    val viewModel: DetailViewModel = viewModel(
-        factory = DetailViewModelFactory(
-            application.repository,
-            notificationManager,
-            year, month, day
-        )
-    )
+    val viewModel: DetailViewModel =
+            viewModel(
+                    factory =
+                            DetailViewModelFactory(
+                                    application.repository,
+                                    notificationManager,
+                                    year,
+                                    month,
+                                    day
+                            )
+            )
     DetailScreen(year, month, day, viewModel)
 }
