@@ -5,6 +5,7 @@ import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import io.github.stupidgame.calyendar.EventNotificationReceiver
 import io.github.stupidgame.calyendar.data.Event
 
@@ -13,6 +14,10 @@ class EventNotificationManager(private val context: Context) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     fun scheduleEventNotification(event: Event) {
+        // Android 12 (API 31) 以降では権限チェックが必要
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+            return
+        }
         val notificationList = mutableListOf<Long>()
         if (event.notifications.isNotBlank()) {
             event.notifications.split(",").mapNotNull { it.toLongOrNull() }.let { notificationList.addAll(it) }
