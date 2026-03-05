@@ -51,6 +51,7 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
 
         init {
                 loadMonth(uiState.value.year, uiState.value.month)
+                viewModelScope.launch { repository.fetchJapaneseHolidays() }
         }
 
         fun loadMonth(year: Int, month: Int) {
@@ -296,11 +297,10 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
         fun importIcs(
                 uri: Uri,
                 contentResolver: ContentResolver,
-                isHoliday: Boolean,
                 onResult: (String) -> Unit
         ) {
                 viewModelScope.launch {
-                        val result = repository.importIcs(uri, contentResolver, isHoliday)
+                        val result = repository.importIcs(uri, contentResolver)
                         onResult(
                                 result.getOrDefault(
                                         result.exceptionOrNull()?.message ?: "Unknown error"
@@ -309,9 +309,9 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                 }
         }
 
-        fun importWebcal(url: String, isHoliday: Boolean, onResult: (String) -> Unit) {
+        fun importWebcal(url: String, onResult: (String) -> Unit) {
                 viewModelScope.launch {
-                        val result = repository.importWebcal(url, isHoliday)
+                        val result = repository.importWebcal(url)
                         onResult(
                                 result.getOrDefault(
                                         result.exceptionOrNull()?.message ?: "Unknown error"

@@ -58,7 +58,7 @@ fun SummaryCard(
                 elevation = CardDefaults.cardElevation(4.dp)
         ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "現在の所持金", style = MaterialTheme.typography.titleMedium)
+                        Text(text = "現時点で使える金額", style = MaterialTheme.typography.titleMedium)
                         val displayAmount =
                                 if (goal != null) displayBalance - goal.amount else displayBalance
                         Text(
@@ -212,11 +212,11 @@ fun IcalEventCard(event: ImportedEvent, onLongClick: () -> Unit) {
                                 .combinedClickable(onClick = {}, onLongClick = onLongClick)
         ) {
                 val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-                val startTime = event.event.dateStart.value?.let { timeFormat.format(it) }
-                val endTime = event.event.dateEnd.value?.let { timeFormat.format(it) }
+                val startTime = event.event.dateStart?.value?.let { timeFormat.format(it) }
+                val endTime = event.event.dateEnd?.value?.let { timeFormat.format(it) }
 
                 ListItem(
-                        headlineContent = { Text(event.event.summary.value) },
+                        headlineContent = { Text(event.event.summary?.value ?: "") },
                         supportingContent = {
                                 Text(
                                         if (startTime != null && endTime != null)
@@ -254,7 +254,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
                                         Text(
-                                                "現時点で使えるお金",
+                                                "現在の所持金額",
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = contentColor
