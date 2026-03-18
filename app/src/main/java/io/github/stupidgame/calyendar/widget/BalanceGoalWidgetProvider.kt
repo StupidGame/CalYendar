@@ -128,14 +128,16 @@ class BalanceGoalWidgetProvider : AppWidgetProvider() {
             remoteViews.setTextColor(
                 R.id.widget_balance_amount,
                 if (snapshot.comparisonBalance >= 0) {
-                    Color.parseColor("#F7FFF9")
+                    Color.parseColor("#2E7D32")
                 } else {
-                    Color.parseColor("#FFD7D7")
+                    Color.parseColor("#C62828")
                 }
             )
 
             val nextGoal = snapshot.nextGoal
             if (nextGoal != null) {
+                remoteViews.setTextColor(R.id.widget_goal_name, Color.parseColor("#1C1B1F"))
+                remoteViews.setTextColor(R.id.widget_goal_amount, Color.parseColor("#6650A4"))
                 remoteViews.setTextViewText(
                     R.id.widget_goal_name,
                     context.getString(
@@ -151,6 +153,8 @@ class BalanceGoalWidgetProvider : AppWidgetProvider() {
                 )
                 remoteViews.setViewVisibility(R.id.widget_goal_amount, View.VISIBLE)
             } else {
+                remoteViews.setTextColor(R.id.widget_goal_name, Color.parseColor("#49454F"))
+                remoteViews.setTextColor(R.id.widget_goal_amount, Color.parseColor("#79747E"))
                 remoteViews.setTextViewText(
                     R.id.widget_goal_name,
                     context.getString(R.string.widget_no_goal)
