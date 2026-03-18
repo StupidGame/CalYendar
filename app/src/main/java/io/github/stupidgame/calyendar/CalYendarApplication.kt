@@ -7,14 +7,19 @@ import android.content.Context
 import android.os.Build
 import io.github.stupidgame.calyendar.data.CalYendarDatabase
 import io.github.stupidgame.calyendar.data.CalYendarRepository
+import io.github.stupidgame.calyendar.widget.BalanceGoalWidgetSyncManager
 
 class CalYendarApplication : Application() {
     val database: CalYendarDatabase by lazy { CalYendarDatabase.getDatabase(this) }
     val repository: CalYendarRepository by lazy { CalYendarRepository(database.calyendarDao()) }
+    private val balanceGoalWidgetSyncManager by lazy {
+        BalanceGoalWidgetSyncManager(this, database)
+    }
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        balanceGoalWidgetSyncManager.start()
     }
 
     private fun createNotificationChannel() {

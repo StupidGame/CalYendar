@@ -21,6 +21,22 @@
             android:name=".EventNotificationReceiver"
             android:enabled="true"
             android:exported="false" />
+        <receiver
+            android:name=".widget.BalanceGoalWidgetProvider"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="io.github.stupidgame.calyendar.action.REFRESH_BALANCE_GOAL_WIDGET" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/balance_goal_widget_info" />
+        </receiver>
         <activity
             android:name=".MainActivity"
             android:exported="true"

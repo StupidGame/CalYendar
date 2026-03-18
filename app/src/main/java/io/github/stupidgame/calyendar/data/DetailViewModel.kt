@@ -1,14 +1,11 @@
 package io.github.stupidgame.calyendar.data
 
-import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.github.stupidgame.calyendar.utils.EventNotificationManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -188,7 +185,13 @@ class DetailViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return DetailViewModel(repository, notificationManager, year, month, day) as T
+            return DetailViewModel(
+                repository,
+                notificationManager,
+                year,
+                month,
+                day
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

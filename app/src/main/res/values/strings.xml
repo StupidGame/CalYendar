@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">CalYendar</string>
+    <string name="widget_current_balance">現時点の所持金</string>
+    <string name="widget_next_goal">次の目標</string>
+    <string name="widget_no_goal">目標なし</string>
+    <string name="widget_no_goal_amount">--</string>
+    <string name="widget_yen_amount">%1$,d円</string>
+    <string name="widget_goal_name_with_date">%1$d/%2$d %3$s</string>
 </resources>
