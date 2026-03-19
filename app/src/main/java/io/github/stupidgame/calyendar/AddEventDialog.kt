@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.stupidgame.calyendar.data.Event
 import java.time.Instant
@@ -49,6 +50,8 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 fun formatNotificationLabel(minutes: Long): String {
     return when(minutes) {
@@ -62,6 +65,12 @@ fun formatNotificationLabel(minutes: Long): String {
             else "${minutes}分前"
         }
     }
+}
+
+private fun ZoneId.toJapaneseLabel(): String {
+    val displayName = getDisplayName(TextStyle.FULL, Locale.JAPAN)
+    val offset = rules.getOffset(Instant.now()).id.replace("Z", "+00:00")
+    return "$displayName（時差 $offset）"
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -99,7 +108,9 @@ fun AddEventDialog(
     var endTime by remember { mutableStateOf(initialEndTime) }
     var zoneId by remember { mutableStateOf(ZoneId.systemDefault()) }
     var zoneDropDownExpanded by remember { mutableStateOf(false) }
-    val availableZoneIds = remember { ZoneId.getAvailableZoneIds().sorted() }
+    val availableZoneIds = remember {
+        ZoneId.getAvailableZoneIds().map(ZoneId::of).sortedBy { it.toJapaneseLabel() }
+    }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -209,7 +220,7 @@ fun AddEventDialog(
                     onExpandedChange = { zoneDropDownExpanded = !zoneDropDownExpanded }
                 ) {
                     OutlinedTextField(
-                        value = zoneId.id,
+                        value = zoneId.toJapaneseLabel(),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("タイムゾーン") },
@@ -222,11 +233,11 @@ fun AddEventDialog(
                         expanded = zoneDropDownExpanded,
                         onDismissRequest = { zoneDropDownExpanded = false }
                     ) {
-                        availableZoneIds.forEach { id ->
+                        availableZoneIds.forEach { availableZoneId ->
                             DropdownMenuItem(
-                                text = { Text(id) },
+                                text = { Text(availableZoneId.toJapaneseLabel()) },
                                 onClick = {
-                                    zoneId = ZoneId.of(id)
+                                    zoneId = availableZoneId
                                     zoneDropDownExpanded = false
                                 }
                             )
@@ -444,7 +455,7 @@ fun AddEventDialog(
                         }
                     }
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.action_confirm))
                 }
             },
             dismissButton = {
@@ -468,7 +479,7 @@ fun AddEventDialog(
                         repeatUntil = Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
                     }
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.action_confirm))
                 }
             },
             dismissButton = {
@@ -497,7 +508,7 @@ fun AddEventDialog(
                         endTime = localTime
                     }
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.action_confirm))
                 }
             },
             dismissButton = {

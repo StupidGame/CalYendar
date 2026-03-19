@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.stupidgame.calyendar.data.CalendarViewModel
 import io.github.stupidgame.calyendar.data.SettingsViewModel
@@ -37,6 +38,8 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val uiState by settingsViewModel.uiState.collectAsState()
+    val backupFileName =
+        stringResource(R.string.settings_backup_file_name, LocalDate.now().toString())
 
     val importIcsLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -71,17 +74,17 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
         ) {
-            Text("Settings", style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium)
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text("Calendar import", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_calendar_import), style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = { importIcsLauncher.launch(arrayOf("text/calendar", "text/*")) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Import iCal (.ics)")
+                Text(stringResource(R.string.settings_import_ics))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -89,7 +92,7 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = uiState.webCalUrl,
                 onValueChange = settingsViewModel::updateWebCalUrl,
-                label = { Text("WebCal URL") },
+                label = { Text(stringResource(R.string.settings_webcal_address)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -102,19 +105,19 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = uiState.webCalUrl.isNotBlank()
             ) {
-                Text("Import WebCal")
+                Text(stringResource(R.string.settings_import_webcal))
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Text("Default notifications", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_default_notifications), style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("1 day before")
+                Text(stringResource(R.string.settings_notify_one_day_before))
                 Switch(
                     checked = uiState.notificationOneDayBefore,
                     onCheckedChange = settingsViewModel::updateNotificationOneDayBefore
@@ -125,7 +128,7 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("1 hour before")
+                Text(stringResource(R.string.settings_notify_one_hour_before))
                 Switch(
                     checked = uiState.notificationOneHourBefore,
                     onCheckedChange = settingsViewModel::updateNotificationOneHourBefore
@@ -134,32 +137,30 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Text("CSV backup", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_backup_title), style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Export and import settings, events, transactions, and goals in one CSV file.",
+                stringResource(R.string.settings_backup_description),
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Import replaces local events, transactions, and goals. Imported calendar feeds stay as-is.",
+                stringResource(R.string.settings_backup_warning),
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(12.dp))
             Button(
-                onClick = {
-                    exportCsvLauncher.launch("calyendar-backup-${LocalDate.now()}.csv")
-                },
+                onClick = { exportCsvLauncher.launch(backupFileName) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Export CSV")
+                Text(stringResource(R.string.settings_export_backup))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = { importCsvLauncher.launch(arrayOf("text/*", "application/*")) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Import CSV")
+                Text(stringResource(R.string.settings_import_backup))
             }
         }
     }

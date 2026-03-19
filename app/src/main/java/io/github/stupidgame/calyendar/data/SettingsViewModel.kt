@@ -72,13 +72,13 @@ class SettingsViewModel(
                             outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
                                 writer.write(CsvBackupCodec.encode(backupData))
                             }
-                        } ?: throw IOException("Could not open the export destination.")
+                        } ?: throw IOException("書き出し先を開けませんでした。")
 
-                        "CSV exported: events=${backupData.events.size}, transactions=${backupData.transactions.size}, goals=${backupData.goals.size}"
+                        "バックアップを書き出しました。イベント${backupData.events.size}件、取引${backupData.transactions.size}件、目標${backupData.goals.size}件です。"
                     }
                 }
 
-            onResult(result.getOrDefault(result.exceptionOrNull()?.message ?: "Unknown error"))
+            onResult(result.getOrDefault(result.exceptionOrNull()?.message ?: "不明なエラーが発生しました。"))
         }
     }
 
@@ -90,7 +90,7 @@ class SettingsViewModel(
                         val csvContent =
                             contentResolver.openInputStream(uri)?.use { inputStream ->
                                 inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                            } ?: throw IOException("Could not open the CSV file.")
+                            } ?: throw IOException("バックアップファイルを開けませんでした。")
 
                         val backupData = CsvBackupCodec.decode(csvContent)
                         val existingEvents = repository.getAllEventsSnapshot()
@@ -109,11 +109,11 @@ class SettingsViewModel(
                             throw exception
                         }
 
-                        "CSV imported: events=${backupData.events.size}, transactions=${backupData.transactions.size}, goals=${backupData.goals.size}"
+                        "バックアップを読み込みました。イベント${backupData.events.size}件、取引${backupData.transactions.size}件、目標${backupData.goals.size}件です。"
                     }
                 }
 
-            onResult(result.getOrDefault(result.exceptionOrNull()?.message ?: "Unknown error"))
+            onResult(result.getOrDefault(result.exceptionOrNull()?.message ?: "不明なエラーが発生しました。"))
         }
     }
 

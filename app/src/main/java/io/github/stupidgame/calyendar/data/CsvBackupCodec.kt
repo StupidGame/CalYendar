@@ -73,13 +73,13 @@ object CsvBackupCodec {
 
     fun decode(csv: String): CsvBackupData {
         val rows = parseCsv(csv)
-        require(rows.isNotEmpty()) { "CSV is empty." }
+        require(rows.isNotEmpty()) { "バックアップファイルが空です。" }
 
         val actualHeader = rows.first().normalizeRow().toMutableList()
         if (actualHeader.isNotEmpty()) {
             actualHeader[0] = actualHeader[0].removePrefix("\uFEFF")
         }
-        require(actualHeader == header) { "Unsupported CSV header." }
+        require(actualHeader == header) { "バックアップファイルの形式に対応していません。" }
 
         var settings = AppSettings()
         val events = mutableListOf<Event>()
@@ -95,7 +95,7 @@ object CsvBackupCodec {
                     val key = row[columnSettingKey]
                     val value = row[columnSettingValue]
                     if (key == "format_version" && value != formatVersion) {
-                        throw IllegalArgumentException("Unsupported CSV version: $value")
+                        throw IllegalArgumentException("バックアップファイルのバージョンに対応していません。($value)")
                     }
                 }
                 recordSetting -> {
@@ -118,17 +118,17 @@ object CsvBackupCodec {
                 recordEvent -> {
                     events +=
                         Event(
-                            id = row[columnId].toLongValue("event id", index),
-                            year = row[columnYear].toIntValue("event year", index),
+                            id = row[columnId].toLongValue("イベントID", index),
+                            year = row[columnYear].toIntValue("イベントの年", index),
                             month = row[columnMonth].toMonthValue(index),
-                            day = row[columnDay].toIntValue("event day", index),
+                            day = row[columnDay].toIntValue("イベントの日", index),
                             title = row[columnTitle],
-                            startTime = row[columnStartTime].toLongValue("event start time", index),
-                            endTime = row[columnEndTime].toLongValue("event end time", index),
+                            startTime = row[columnStartTime].toLongValue("イベントの開始時刻", index),
+                            endTime = row[columnEndTime].toLongValue("イベントの終了時刻", index),
                             notificationMinutesBefore =
                                 row[columnNotificationMinutes]
                                     .ifBlank { "-1" }
-                                    .toLongValue("event notification", index),
+                                    .toLongValue("イベント通知", index),
                             isHoliday = row[columnIsHoliday].toBooleanValue(),
                             seriesId = row[columnSeriesId].ifBlank { null },
                             notifications = row[columnNotifications]
@@ -137,32 +137,29 @@ object CsvBackupCodec {
                 recordTransaction -> {
                     transactions +=
                         Transaction(
-                            id = row[columnId].toIntValue("transaction id", index),
-                            year = row[columnYear].toIntValue("transaction year", index),
+                            id = row[columnId].toIntValue("取引ID", index),
+                            year = row[columnYear].toIntValue("取引の年", index),
                             month = row[columnMonth].toMonthValue(index),
-                            day = row[columnDay].toIntValue("transaction day", index),
-                            type =
-                                TransactionType.valueOf(
-                                    row[columnTransactionType].uppercase()
-                                ),
+                            day = row[columnDay].toIntValue("取引の日", index),
+                            type = row[columnTransactionType].toTransactionType(index),
                             name = row[columnName],
-                            amount = row[columnAmount].toLongValue("transaction amount", index),
+                            amount = row[columnAmount].toLongValue("取引金額", index),
                             details = row[columnDetails].ifBlank { null }
                         )
                 }
                 recordGoal -> {
                     goals +=
                         FinancialGoal(
-                            id = row[columnId].toIntValue("goal id", index),
-                            year = row[columnYear].toIntValue("goal year", index),
+                            id = row[columnId].toIntValue("目標ID", index),
+                            year = row[columnYear].toIntValue("目標の年", index),
                             month = row[columnMonth].toMonthValue(index),
-                            day = row[columnDay].toIntValue("goal day", index),
+                            day = row[columnDay].toIntValue("目標の日", index),
                             name = row[columnName],
-                            amount = row[columnAmount].toLongValue("goal amount", index)
+                            amount = row[columnAmount].toLongValue("目標金額", index)
                         )
                 }
                 else -> {
-                    throw IllegalArgumentException("Unknown record type at row ${index + 2}.")
+                    throw IllegalArgumentException("${index + 2}行目のレコード種別が不正です。")
                 }
             }
         }
@@ -349,7 +346,7 @@ object CsvBackupCodec {
             index++
         }
 
-        require(!insideQuotes) { "CSV contains an unterminated quoted field." }
+        require(!insideQuotes) { "バックアップファイルに閉じられていない引用符があります。" }
 
         if (currentField.isNotEmpty() || currentRow.isNotEmpty()) {
             currentRow.add(currentField.toString())
@@ -371,24 +368,31 @@ object CsvBackupCodec {
         return when (trim().lowercase()) {
             "true", "1", "yes", "on" -> true
             "false", "0", "no", "off", "" -> false
-            else -> throw IllegalArgumentException("Unsupported boolean value: $this")
+            else -> throw IllegalArgumentException("真偽値として解釈できない値です。($this)")
         }
     }
 
     private fun String.toIntValue(fieldName: String, rowIndex: Int): Int {
         return toIntOrNull()
-            ?: throw IllegalArgumentException("Invalid $fieldName at row ${rowIndex + 2}.")
+            ?: throw IllegalArgumentException("${rowIndex + 2}行目の$fieldNameが不正です。")
     }
 
     private fun String.toLongValue(fieldName: String, rowIndex: Int): Long {
         return toLongOrNull()
-            ?: throw IllegalArgumentException("Invalid $fieldName at row ${rowIndex + 2}.")
+            ?: throw IllegalArgumentException("${rowIndex + 2}行目の$fieldNameが不正です。")
     }
 
     private fun String.toMonthValue(rowIndex: Int): Int {
-        val month = toIntValue("month", rowIndex)
-        require(month in 1..12) { "Month must be between 1 and 12 at row ${rowIndex + 2}." }
+        val month = toIntValue("月", rowIndex)
+        require(month in 1..12) { "${rowIndex + 2}行目の月は1から12の間で指定してください。" }
         return month - 1
+    }
+
+    private fun String.toTransactionType(rowIndex: Int): TransactionType {
+        return runCatching { TransactionType.valueOf(uppercase()) }
+            .getOrElse {
+                throw IllegalArgumentException("${rowIndex + 2}行目の取引種別が不正です。")
+            }
     }
 
     private const val columnRecordType = 0

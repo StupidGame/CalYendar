@@ -303,7 +303,7 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                         val result = repository.importIcs(uri, contentResolver)
                         onResult(
                                 result.getOrDefault(
-                                        result.exceptionOrNull()?.message ?: "Unknown error"
+                                        result.exceptionOrNull()?.message ?: "不明なエラーが発生しました。"
                                 )
                         )
                 }
@@ -314,7 +314,7 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                         val result = repository.importWebcal(url)
                         onResult(
                                 result.getOrDefault(
-                                        result.exceptionOrNull()?.message ?: "Unknown error"
+                                        result.exceptionOrNull()?.message ?: "不明なエラーが発生しました。"
                                 )
                         )
                 }

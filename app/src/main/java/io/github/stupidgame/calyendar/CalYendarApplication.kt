@@ -26,8 +26,8 @@ class CalYendarApplication : Application() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Event Reminders"
-            val descriptionText = "Notifications for upcoming events"
+            val name = getString(R.string.notification_channel_name)
+            val descriptionText = getString(R.string.notification_channel_description)
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel = NotificationChannel("EVENT_REMINDERS", name, importance).apply {
                 description = descriptionText

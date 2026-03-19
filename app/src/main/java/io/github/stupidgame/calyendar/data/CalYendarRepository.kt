@@ -135,14 +135,14 @@ class CalYendarRepository(private val database: CalYendarDatabase) {
             runCatching {
                 contentResolver.openInputStream(uri)?.use { inputStream ->
                     val ical = Biweekly.parse(inputStream).first()
-                    if (ical == null) throw IOException("Failed to parse iCal")
+                    if (ical == null) throw IOException("カレンダーファイルを解析できませんでした。")
 
                     val events = ical.events.map { event ->
                         ImportedEvent(event = event, isHoliday = false)
                     }
                     dao.upsertImportedEvents(events)
-                    "Calendar imported."
-                } ?: throw IOException("Could not open input stream")
+                    "カレンダーを読み込みました。"
+                } ?: throw IOException("ファイルを開けませんでした。")
             }
         }
     }
@@ -154,17 +154,20 @@ class CalYendarRepository(private val database: CalYendarDatabase) {
                 val request = Request.Builder().url(url.replace("webcal", "https")).build()
 
                 client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
+                    if (!response.isSuccessful) {
+                        throw IOException("サーバーから予期しない応答が返されました。(${response.code})")
+                    }
 
-                    val inputStream = response.body?.byteStream() ?: throw IOException("Empty body")
+                    val inputStream = response.body?.byteStream()
+                        ?: throw IOException("サーバーの応答が空でした。")
                     val ical = Biweekly.parse(inputStream).first()
-                    if (ical == null) throw IOException("Failed to parse iCal")
+                    if (ical == null) throw IOException("カレンダー情報を解析できませんでした。")
 
                     val events = ical.events.map { event ->
                         ImportedEvent(event = event, isHoliday = false)
                     }
                     dao.upsertImportedEvents(events)
-                    "Calendar imported."
+                    "カレンダーを読み込みました。"
                 }
             }
         }

@@ -1,5 +1,24 @@
 <resources>
     <string name="app_name">CalYendar</string>
+    <string name="settings_title">設定</string>
+    <string name="settings_calendar_import">カレンダーの読み込み</string>
+    <string name="settings_import_ics">カレンダーファイル（.ics）を読み込む</string>
+    <string name="settings_webcal_address">購読カレンダーのアドレス</string>
+    <string name="settings_import_webcal">購読カレンダーを読み込む</string>
+    <string name="settings_default_notifications">既定の通知</string>
+    <string name="settings_notify_one_day_before">1日前</string>
+    <string name="settings_notify_one_hour_before">1時間前</string>
+    <string name="settings_backup_title">バックアップ</string>
+    <string name="settings_backup_description">設定、イベント、取引、目標を1つのバックアップファイルにまとめて保存・読み込みできます。</string>
+    <string name="settings_backup_warning">読み込みを行うと、端末内のイベント、取引、目標はバックアップ内容で置き換わります。購読中のカレンダーはそのまま残ります。</string>
+    <string name="settings_export_backup">バックアップを書き出す</string>
+    <string name="settings_import_backup">バックアップを読み込む</string>
+    <string name="settings_backup_file_name">バックアップ-%1$s.csv</string>
+    <string name="notification_channel_name">予定の通知</string>
+    <string name="notification_channel_description">今後の予定を知らせる通知です</string>
+    <string name="notification_default_title">予定</string>
+    <string name="notification_content_upcoming">予定の開始が近づいています</string>
+    <string name="action_confirm">決定</string>
     <string name="widget_current_balance">現時点の所持金</string>
     <string name="widget_next_goal">次の目標</string>
     <string name="widget_no_goal">目標なし</string>
