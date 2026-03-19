@@ -55,7 +55,13 @@ import io.github.stupidgame.calyendar.utils.EventNotificationManager
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
+fun DetailScreen(
+    year: Int,
+    month: Int,
+    day: Int,
+    viewModel: DetailViewModel,
+    defaultNotifications: List<Long> = emptyList()
+) {
     val uiState by viewModel.uiState.collectAsState(initial = DetailUiState())
 
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -272,6 +278,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     year = viewModel.year,
                     month = viewModel.month,
                     day = viewModel.day,
+                    defaultNotifications = defaultNotifications,
                     onDismiss = { editingEvent = null },
                     onConfirm = {
                             title,
@@ -383,6 +390,7 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
                     year = viewModel.year,
                     month = viewModel.month,
                     day = viewModel.day,
+                    defaultNotifications = defaultNotifications,
                     onDismiss = { showAddEventDialog = false },
                     onConfirm = {
                             title,
@@ -432,7 +440,11 @@ fun DetailScreen(year: Int, month: Int, day: Int, viewModel: DetailViewModel) {
 fun RealDetailScreen(year: Int, month: Int, day: Int) {
     val context = LocalContext.current
     val application = context.applicationContext as CalYendarApplication
-    val notificationManager = remember { EventNotificationManager(context) }
+    val notificationManager = remember { EventNotificationManager(application) }
+    val settings by
+            application.appSettingsStore.settingsFlow.collectAsState(
+                    initial = application.appSettingsStore.getSettings()
+            )
     val viewModel: DetailViewModel =
             viewModel(
                     factory =
@@ -444,5 +456,11 @@ fun RealDetailScreen(year: Int, month: Int, day: Int) {
                                     day
                             )
             )
-    DetailScreen(year, month, day, viewModel)
+    DetailScreen(
+            year = year,
+            month = month,
+            day = day,
+            viewModel = viewModel,
+            defaultNotifications = settings.defaultNotificationMinutes
+    )
 }

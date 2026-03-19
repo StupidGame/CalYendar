@@ -50,7 +50,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import io.github.stupidgame.calyendar.data.CalendarViewModel
 import io.github.stupidgame.calyendar.data.CalendarViewModelFactory
+import io.github.stupidgame.calyendar.data.SettingsViewModel
+import io.github.stupidgame.calyendar.data.SettingsViewModelFactory
 import io.github.stupidgame.calyendar.ui.theme.CalYendarTheme
+import io.github.stupidgame.calyendar.utils.EventNotificationManager
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.Locale
@@ -93,19 +96,18 @@ fun CalYendarApp() {
     var month by remember { mutableIntStateOf(today.monthValue - 1) }
 
     val calendarViewModel: CalendarViewModel = viewModel(factory = CalendarViewModelFactory(app.repository))
+    val settingsViewModel: SettingsViewModel =
+        viewModel(
+            factory =
+                SettingsViewModelFactory(
+                    app.repository,
+                    app.appSettingsStore,
+                    EventNotificationManager(app)
+                )
+        )
 
     LaunchedEffect(year, month) {
         calendarViewModel.loadMonth(year, month)
-    }
-
-    val openDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri: Uri? ->
-        uri?.let {
-            calendarViewModel.importIcs(it, context.contentResolver) { message ->
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -248,9 +250,7 @@ fun CalYendarApp() {
                 composable("settings") {
                     SettingsScreen(
                         calendarViewModel = calendarViewModel,
-                        onImportIcsClick = {
-                            openDocumentLauncher.launch(arrayOf("text/calendar"))
-                        }
+                        settingsViewModel = settingsViewModel
                     )
                 }
             }

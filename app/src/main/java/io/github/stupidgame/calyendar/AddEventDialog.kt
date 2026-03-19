@@ -71,6 +71,7 @@ fun AddEventDialog(
     year: Int,
     month: Int,
     day: Int,
+    defaultNotifications: List<Long> = emptyList(),
     onDismiss: () -> Unit,
     onConfirm: (
         title: String,
@@ -112,7 +113,7 @@ fun AddEventDialog(
             } else if (event != null && event.notificationMinutesBefore != -1L) {
                 listOf(event.notificationMinutesBefore)
             } else {
-                emptyList()
+                defaultNotifications.distinct()
             }
         )
     }
