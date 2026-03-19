@@ -374,12 +374,12 @@ object CsvBackupCodec {
 
     private fun String.toIntValue(fieldName: String, rowIndex: Int): Int {
         return toIntOrNull()
-            ?: throw IllegalArgumentException("${rowIndex + 2}行目の$fieldNameが不正です。")
+            ?: throw IllegalArgumentException("${rowIndex + 2}行目の${fieldName}が不正です。")
     }
 
     private fun String.toLongValue(fieldName: String, rowIndex: Int): Long {
         return toLongOrNull()
-            ?: throw IllegalArgumentException("${rowIndex + 2}行目の$fieldNameが不正です。")
+            ?: throw IllegalArgumentException("${rowIndex + 2}行目の${fieldName}が不正です。")
     }
 
     private fun String.toMonthValue(rowIndex: Int): Int {

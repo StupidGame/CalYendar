@@ -22,6 +22,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -45,6 +46,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.stupidgame.calyendar.data.Event
+import io.github.stupidgame.calyendar.data.EventRepeatType
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -91,7 +93,7 @@ fun AddEventDialog(
         zoneId: ZoneId,
         notifications: List<Long>,
         isHoliday: Boolean,
-        repeatType: String,
+        repeatType: EventRepeatType,
         repeatUntil: LocalDate?,
         repeatDays: Set<Int>
     ) -> Unit
@@ -147,8 +149,8 @@ fun AddEventDialog(
     var isHoliday by remember { mutableStateOf(event?.isHoliday ?: false) }
 
     // Repeat state
-    var repeatType by remember { mutableStateOf("なし") }
-    val repeatOptions = listOf("なし", "毎日", "毎週", "曜日指定")
+    var repeatType by remember { mutableStateOf(EventRepeatType.NONE) }
+    val repeatOptions = remember { EventRepeatType.entries }
     var repeatDropDownExpanded by remember { mutableStateOf(false) }
 
     var repeatUntil by remember { mutableStateOf(startDate.plusYears(1)) }
@@ -229,7 +231,7 @@ fun AddEventDialog(
                             .menuAnchor()
                             .fillMaxWidth()
                     )
-                    ExposedDropdownMenu(
+                    DropdownMenu(
                         expanded = zoneDropDownExpanded,
                         onDismissRequest = { zoneDropDownExpanded = false }
                     ) {
@@ -274,7 +276,7 @@ fun AddEventDialog(
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = notificationDropDownExpanded) },
                             modifier = Modifier.menuAnchor()
                         )
-                        ExposedDropdownMenu(
+                        DropdownMenu(
                             expanded = notificationDropDownExpanded,
                             onDismissRequest = { notificationDropDownExpanded = false }
                         ) {
@@ -339,7 +341,7 @@ fun AddEventDialog(
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = customUnitDropDownExpanded) },
                                 modifier = Modifier.menuAnchor()
                             )
-                            ExposedDropdownMenu(
+                            DropdownMenu(
                                 expanded = customUnitDropDownExpanded,
                                 onDismissRequest = { customUnitDropDownExpanded = false }
                             ) {
@@ -364,7 +366,7 @@ fun AddEventDialog(
                     onExpandedChange = { repeatDropDownExpanded = !repeatDropDownExpanded }
                 ) {
                     OutlinedTextField(
-                        value = repeatType,
+                        value = repeatType.label,
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = repeatDropDownExpanded) },
@@ -372,13 +374,13 @@ fun AddEventDialog(
                             .menuAnchor()
                             .fillMaxWidth()
                     )
-                    ExposedDropdownMenu(
+                    DropdownMenu(
                         expanded = repeatDropDownExpanded,
                         onDismissRequest = { repeatDropDownExpanded = false }
                     ) {
                         repeatOptions.forEach { option ->
                             DropdownMenuItem(
-                                text = { Text(option) },
+                                text = { Text(option.label) },
                                 onClick = {
                                     repeatType = option
                                     repeatDropDownExpanded = false
@@ -388,7 +390,7 @@ fun AddEventDialog(
                     }
                 }
 
-                if (repeatType == "曜日指定") {
+                if (repeatType == EventRepeatType.WEEKDAY_SELECTION) {
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow {
                         daysOfWeek.forEachIndexed { index, dayName ->
@@ -405,7 +407,7 @@ fun AddEventDialog(
                     }
                 }
 
-                if (repeatType != "なし") {
+                if (repeatType != EventRepeatType.NONE) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("繰り返し終了日", style = MaterialTheme.typography.labelSmall)
                     OutlinedButton(
@@ -427,7 +429,10 @@ fun AddEventDialog(
                 onClick = {
                     onConfirm(title, startDate, startTime, endDate, endTime, zoneId, notifications, isHoliday, repeatType, repeatUntil, selectedDays)
                 },
-                enabled = title.isNotBlank() && (repeatType != "曜日指定" || selectedDays.isNotEmpty())
+                enabled =
+                    title.isNotBlank() &&
+                        (repeatType != EventRepeatType.WEEKDAY_SELECTION ||
+                            selectedDays.isNotEmpty())
             ) {
                 Text("保存")
             }

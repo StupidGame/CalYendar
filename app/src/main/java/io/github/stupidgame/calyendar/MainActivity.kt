@@ -2,13 +2,11 @@ package io.github.stupidgame.calyendar
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,15 +31,15 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -54,9 +52,48 @@ import io.github.stupidgame.calyendar.data.SettingsViewModel
 import io.github.stupidgame.calyendar.data.SettingsViewModelFactory
 import io.github.stupidgame.calyendar.ui.theme.CalYendarTheme
 import io.github.stupidgame.calyendar.utils.EventNotificationManager
-import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.util.Locale
+import kotlinx.coroutines.launch
+
+private object AppRoute {
+    const val CALENDAR = "calendar"
+    const val SETTINGS = "settings"
+    const val DETAIL_PATTERN = "detail/{year}/{month}/{day}"
+
+    fun detail(year: Int, month: Int, day: Int): String = "detail/$year/$month/$day"
+}
+
+private data class CalendarMonthSelection(val year: Int, val month: Int) {
+    fun shiftBy(months: Long): CalendarMonthSelection {
+        val shifted = LocalDate.of(year, month + 1, 1).plusMonths(months)
+        return CalendarMonthSelection(shifted.year, shifted.monthValue - 1)
+    }
+
+    fun title(): String = "$year/${month + 1}"
+}
+
+private data class DetailDateSelection(val year: Int, val month: Int, val day: Int) {
+    fun shiftBy(days: Long): DetailDateSelection {
+        val shifted = LocalDate.of(year, month + 1, day).plusDays(days)
+        return from(shifted)
+    }
+
+    fun title(): String = "$year/${month + 1}/$day"
+
+    companion object {
+        fun from(date: LocalDate): DetailDateSelection =
+            DetailDateSelection(date.year, date.monthValue - 1, date.dayOfMonth)
+    }
+}
+
+private fun Bundle?.toDetailDateSelection(
+    fallback: CalendarMonthSelection
+): DetailDateSelection =
+    DetailDateSelection(
+        year = this?.getString("year")?.toIntOrNull() ?: fallback.year,
+        month = this?.getString("month")?.toIntOrNull() ?: fallback.month,
+        day = this?.getString("day")?.toIntOrNull() ?: 1
+    )
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,23 +116,33 @@ fun CalYendarApp() {
     val context = LocalContext.current
     val app = context.applicationContext as CalYendarApplication
 
-    val requestPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean -> }
+    val requestPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) {}
 
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
-    val today = LocalDate.now()
-    var year by remember { mutableIntStateOf(today.year) }
-    var month by remember { mutableIntStateOf(today.monthValue - 1) }
+    var monthSelection by
+        remember {
+            mutableStateOf(
+                LocalDate.now().let { today ->
+                    CalendarMonthSelection(today.year, today.monthValue - 1)
+                }
+            )
+        }
 
-    val calendarViewModel: CalendarViewModel = viewModel(factory = CalendarViewModelFactory(app.repository))
+    val calendarViewModel: CalendarViewModel =
+        viewModel(factory = CalendarViewModelFactory(app.repository))
     val settingsViewModel: SettingsViewModel =
         viewModel(
             factory =
@@ -106,24 +153,29 @@ fun CalYendarApp() {
                 )
         )
 
-    LaunchedEffect(year, month) {
-        calendarViewModel.loadMonth(year, month)
+    LaunchedEffect(monthSelection.year, monthSelection.month) {
+        calendarViewModel.loadMonth(monthSelection.year, monthSelection.month)
     }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val detailSelection = navBackStackEntry?.arguments.toDetailDateSelection(monthSelection)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                Text(stringResource(R.string.app_name), modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    stringResource(R.string.app_name),
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.headlineSmall
+                )
                 Divider()
                 NavigationDrawerItem(
-                    label = { Text("カレンダー") },
-                    selected = currentRoute == "calendar",
+                    label = { Text("Calendar") },
+                    selected = currentRoute == AppRoute.CALENDAR,
                     onClick = {
-                        navController.navigate("calendar") {
+                        navController.navigate(AppRoute.CALENDAR) {
                             popUpTo(navController.graph.startDestinationId)
                             launchSingleTop = true
                         }
@@ -131,10 +183,12 @@ fun CalYendarApp() {
                     }
                 )
                 NavigationDrawerItem(
-                    label = { Text("設定") },
-                    selected = currentRoute == "settings",
+                    label = { Text("Settings") },
+                    selected = currentRoute == AppRoute.SETTINGS,
                     onClick = {
-                        navController.navigate("settings")
+                        navController.navigate(AppRoute.SETTINGS) {
+                            launchSingleTop = true
+                        }
                         scope.launch { drawerState.close() }
                     }
                 )
@@ -144,84 +198,102 @@ fun CalYendarApp() {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
-                val title = when {
-                    currentRoute?.startsWith("detail") == true -> {
-                        val args = navBackStackEntry?.arguments
-                        val dYear = args?.getString("year")?.toInt() ?: year
-                        val dMonth = args?.getString("month")?.toInt() ?: month
-                        val dDay = args?.getString("day")?.toInt() ?: 1
-                        "${dYear}年 ${dMonth + 1}月 ${dDay}日"
+                val title =
+                    when {
+                        currentRoute?.startsWith("detail") == true -> detailSelection.title()
+                        currentRoute == AppRoute.SETTINGS -> "Settings"
+                        else -> monthSelection.title()
                     }
-                    currentRoute == "settings" -> "設定"
-                    else -> String.format(Locale.getDefault(), "%d年 %d月", year, month + 1)
-                }
 
                 TopAppBar(
                     title = { Text(title) },
                     navigationIcon = {
-                        if (currentRoute == "calendar") {
+                        if (currentRoute == AppRoute.CALENDAR) {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "メニュー")
+                                Icon(Icons.Default.Menu, contentDescription = "Open menu")
                             }
                         } else {
-                            IconButton(onClick = { navController.popBackStack("calendar", false) }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                            IconButton(
+                                onClick = { navController.popBackStack(AppRoute.CALENDAR, false) }
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back"
+                                )
                             }
                         }
                     },
                     actions = {
-                        if (currentRoute == "calendar") {
-                            IconButton(onClick = {
-                                if (month == 0) {
-                                    month = 11
-                                    year--
-                                } else {
-                                    month--
+                        when {
+                            currentRoute == AppRoute.CALENDAR -> {
+                                IconButton(
+                                    onClick = {
+                                        monthSelection = monthSelection.shiftBy(-1L)
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Previous month"
+                                    )
                                 }
-                            }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "前の月")
-                            }
-                            IconButton(onClick = {
-                                if (month == 11) {
-                                    month = 0
-                                    year++
-                                } else {
-                                    month++
+                                IconButton(
+                                    onClick = {
+                                        monthSelection = monthSelection.shiftBy(1L)
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = "Next month"
+                                    )
                                 }
-                            }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "次の月")
                             }
-                        } else if (currentRoute?.startsWith("detail") == true) {
-                            val args = navBackStackEntry?.arguments
-                            val dYear = args?.getString("year")?.toInt() ?: year
-                            val dMonth = args?.getString("month")?.toInt() ?: month
-                            val dDay = args?.getString("day")?.toInt() ?: 1
 
-                            IconButton(onClick = {
-                                val currentData = LocalDate.of(dYear, dMonth + 1, dDay).minusDays(1)
-                                val newYear = currentData.year
-                                val newMonth = currentData.monthValue - 1
-                                val newDay = currentData.dayOfMonth
-                                year = newYear
-                                month = newMonth
-                                navController.navigate("detail/$newYear/$newMonth/$newDay") {
-                                    popUpTo("calendar") {}
+                            currentRoute?.startsWith("detail") == true -> {
+                                IconButton(
+                                    onClick = {
+                                        val previousDate = detailSelection.shiftBy(-1L)
+                                        monthSelection =
+                                            CalendarMonthSelection(
+                                                previousDate.year,
+                                                previousDate.month
+                                            )
+                                        navController.navigate(
+                                            AppRoute.detail(
+                                                previousDate.year,
+                                                previousDate.month,
+                                                previousDate.day
+                                            )
+                                        ) {
+                                            popUpTo(AppRoute.CALENDAR) {}
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Previous day"
+                                    )
                                 }
-                            }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "前の日")
-                            }
-                            IconButton(onClick = {
-                                val currentData = LocalDate.of(dYear, dMonth + 1, dDay).plusDays(1)
-                                val newYear = currentData.year
-                                val newMonth = currentData.monthValue - 1
-                                val newDay = currentData.dayOfMonth
-                                year = newYear
-                                month = newMonth
-                                navController.navigate("detail/$newYear/$newMonth/$newDay") {
-                                    popUpTo("calendar") {}
+                                IconButton(
+                                    onClick = {
+                                        val nextDate = detailSelection.shiftBy(1L)
+                                        monthSelection =
+                                            CalendarMonthSelection(nextDate.year, nextDate.month)
+                                        navController.navigate(
+                                            AppRoute.detail(
+                                                nextDate.year,
+                                                nextDate.month,
+                                                nextDate.day
+                                            )
+                                        ) {
+                                            popUpTo(AppRoute.CALENDAR) {}
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = "Next day"
+                                    )
                                 }
-                            }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "次の日")
                             }
                         }
                     }
@@ -230,24 +302,29 @@ fun CalYendarApp() {
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = "calendar",
+                startDestination = AppRoute.CALENDAR,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                composable("calendar") {
+                composable(AppRoute.CALENDAR) {
                     CalendarScreen(
                         viewModel = calendarViewModel,
                         onDayClick = { day ->
-                            navController.navigate("detail/$year/$month/$day")
+                            navController.navigate(
+                                AppRoute.detail(monthSelection.year, monthSelection.month, day)
+                            )
                         }
                     )
                 }
-                composable("detail/{year}/{month}/{day}") { backStackEntry ->
-                    val detailYear = backStackEntry.arguments?.getString("year")?.toInt() ?: 0
-                    val detailMonth = backStackEntry.arguments?.getString("month")?.toInt() ?: 0
-                    val detailDay = backStackEntry.arguments?.getString("day")?.toInt() ?: 0
-                    RealDetailScreen(year = detailYear, month = detailMonth, day = detailDay)
+                composable(AppRoute.DETAIL_PATTERN) { backStackEntry ->
+                    val selectedDate =
+                        backStackEntry.arguments.toDetailDateSelection(monthSelection)
+                    RealDetailScreen(
+                        year = selectedDate.year,
+                        month = selectedDate.month,
+                        day = selectedDate.day
+                    )
                 }
-                composable("settings") {
+                composable(AppRoute.SETTINGS) {
                     SettingsScreen(
                         calendarViewModel = calendarViewModel,
                         settingsViewModel = settingsViewModel
@@ -257,7 +334,6 @@ fun CalYendarApp() {
         }
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
