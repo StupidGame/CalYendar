@@ -235,9 +235,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
 
         if (monthGoals.isEmpty()) {
                 if (uiState.hasTransactions) { // 現在月でなくても、取引履歴があれば表示
-                        val availableMoney =
-                                if (uiState.isCurrentMonth) uiState.todayBalance
-                                else uiState.currentBalance
+                        val availableMoney = uiState.currentBalance
                         val cardColor =
                                 if (availableMoney >= 0) Color(0xFFA5D6A7) else Color(0xFFEF9A9A)
                         val contentColor =
