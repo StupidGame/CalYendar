@@ -50,6 +50,7 @@ import io.github.stupidgame.calyendar.data.Transaction
 import io.github.stupidgame.calyendar.data.TransactionType
 import io.github.stupidgame.calyendar.ui.components.EventCard
 import io.github.stupidgame.calyendar.ui.components.IcalEventCard
+import io.github.stupidgame.calyendar.ui.components.CurrentBalanceCard
 import io.github.stupidgame.calyendar.ui.components.SummaryCard
 import io.github.stupidgame.calyendar.ui.components.TransactionCard
 import io.github.stupidgame.calyendar.utils.EventNotificationManager
@@ -190,6 +191,8 @@ fun DetailScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                CurrentBalanceCard(balance = uiState.currentBalance)
                 Spacer(modifier = Modifier.height(16.dp))
                 SummaryCard(
                     displayBalance = uiState.summaryBalance,

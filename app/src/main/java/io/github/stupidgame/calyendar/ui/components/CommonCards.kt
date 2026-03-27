@@ -397,10 +397,10 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
 }
 
 @Composable
-fun CurrentBalanceCard(balance: Long) {
+fun CurrentBalanceCard(balance: Long, modifier: Modifier = Modifier) {
         val cardColor = if (balance >= 0) Color(0xFF1B5E20) else Color(0xFFB71C1C)
         Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = cardColor),
                 shape = RoundedCornerShape(16.dp)
         ) {
