@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.stupidgame.calyendar.data.CalendarViewModel
+import io.github.stupidgame.calyendar.ui.components.CurrentBalanceCard
 import io.github.stupidgame.calyendar.ui.components.DayCell
 import io.github.stupidgame.calyendar.ui.components.MonthlyGoalCard
 import java.text.DateFormatSymbols
@@ -36,6 +37,7 @@ fun CalendarScreen(viewModel: CalendarViewModel, onDayClick: (Int) -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        CurrentBalanceCard(balance = uiState.todayBalance)
         WeekdaysHeader()
 
         val calendar = Calendar.getInstance().apply { set(uiState.year, uiState.month, 1) }
