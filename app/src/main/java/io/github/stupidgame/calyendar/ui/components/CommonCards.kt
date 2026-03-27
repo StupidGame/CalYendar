@@ -254,7 +254,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
                                         Text(
-                                                "この月の月末の最終残高",
+                                                "現在の残高",
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = contentColor
