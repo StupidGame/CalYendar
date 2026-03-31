@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 
 data class DetailUiState(
     val currentBalance: Long = 0L,
+    val balanceAfterCompletedGoals: Long = 0L,
     val goal: FinancialGoal? = null,
     val dailyTransactions: List<Transaction> = emptyList(),
     val events: List<Event> = emptyList(),
@@ -41,6 +42,12 @@ class DetailViewModel(
             repository.getImportedEvents()
         ) { allTransactions, allGoals, dailyEvents, dailyTransactions, importedEvents ->
             val currentBalance = FinancialCalculator.calculateDailyBalance(allTransactions)
+            val balanceAfterCompletedGoals =
+                FinancialCalculator.calculateBalanceAfterCompletedGoals(
+                    currentBalance = currentBalance,
+                    allGoals = allGoals,
+                    currentDate = currentDate
+                )
             val prediction =
                 FinancialCalculator.calculatePrediction(
                     currentBalance = currentBalance,
@@ -50,6 +57,7 @@ class DetailViewModel(
 
             DetailUiState(
                 currentBalance = currentBalance,
+                balanceAfterCompletedGoals = balanceAfterCompletedGoals,
                 goal = prediction.upcomingGoal,
                 dailyTransactions = dailyTransactions,
                 events = dailyEvents,

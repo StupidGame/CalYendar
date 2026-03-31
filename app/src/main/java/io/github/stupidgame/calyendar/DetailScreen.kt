@@ -192,7 +192,7 @@ fun DetailScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                CurrentBalanceCard(balance = uiState.currentBalance)
+                CurrentBalanceCard(balance = uiState.balanceAfterCompletedGoals)
                 Spacer(modifier = Modifier.height(16.dp))
                 SummaryCard(
                     displayBalance = uiState.summaryBalance,
