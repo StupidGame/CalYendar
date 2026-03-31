@@ -410,7 +410,7 @@ fun CurrentBalanceCard(balance: Long, modifier: Modifier = Modifier) {
                         verticalAlignment = Alignment.CenterVertically
                 ) {
                         Text(
-                                "現時点の所持金",
+                                "その日時点の所持金",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White

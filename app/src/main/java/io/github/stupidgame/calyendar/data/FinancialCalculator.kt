@@ -57,6 +57,21 @@ object FinancialCalculator {
         )
     }
 
+    fun calculateBalanceAfterCompletedGoals(
+        currentBalance: Long,
+        allGoals: List<FinancialGoal>,
+        currentDate: LocalDate
+    ): Long {
+        val completedGoalTotal =
+            allGoals
+                .filter { goal ->
+                    !LocalDate.of(goal.year, goal.month + 1, goal.day).isAfter(currentDate)
+                }
+                .sumOf(FinancialGoal::amount)
+
+        return currentBalance - completedGoalTotal
+    }
+
     fun calculateDailyBalance(transactions: List<Transaction>): Long {
         return transactions.sumOf {
             when (it.type) {
