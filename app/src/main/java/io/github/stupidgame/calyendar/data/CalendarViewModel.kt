@@ -36,6 +36,14 @@ data class CalendarUiState(
     val isCurrentMonth: Boolean = false
 )
 
+private data class CalendarMonthSourceData(
+    val transactionsUpToToday: List<Transaction>,
+    val transactionsBeforeMonth: List<Transaction>,
+    val monthTransactions: List<Transaction>,
+    val monthEvents: List<Event>,
+    val allGoals: List<FinancialGoal>
+)
+
 class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel() {
 
     private val _uiState =
@@ -58,28 +66,43 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
                 val today = LocalDate.now()
 
                 combine(
-                    repository.getTransactionsUpToToday(
-                        today.year,
-                        today.monthValue - 1,
-                        today.dayOfMonth
-                    ),
-                    repository.getTransactionsUpTo(year, month),
-                    repository.getTransactionsForMonth(year, month),
-                    repository.getEventsForMonth(year, month),
-                    repository.getAllGoals(),
+                    combine(
+                        repository.getTransactionsUpToToday(
+                            today.year,
+                            today.monthValue - 1,
+                            today.dayOfMonth
+                        ),
+                        repository.getTransactionsUpTo(year, month),
+                        repository.getTransactionsForMonth(year, month),
+                        repository.getEventsForMonth(year, month),
+                        repository.getAllGoals()
+                    ) {
+                            transactionsUpToToday,
+                            transactionsBeforeMonth,
+                            monthTransactions,
+                            monthEvents,
+                            allGoals ->
+                        CalendarMonthSourceData(
+                            transactionsUpToToday = transactionsUpToToday,
+                            transactionsBeforeMonth = transactionsBeforeMonth,
+                            monthTransactions = monthTransactions,
+                            monthEvents = monthEvents,
+                            allGoals = allGoals
+                        )
+                    },
                     repository.getImportedEvents()
-                ) { values ->
+                ) { sourceData, importedEvents ->
                     CalendarMonthUiStateFactory.create(
                         CalendarMonthUiStateInput(
                             year = year,
                             month = month,
                             today = today,
-                            transactionsUpToToday = values[0] as List<Transaction>,
-                            transactionsBeforeMonth = values[1] as List<Transaction>,
-                            monthTransactions = values[2] as List<Transaction>,
-                            monthEvents = values[3] as List<Event>,
-                            allGoals = values[4] as List<FinancialGoal>,
-                            importedEvents = values[5] as List<ImportedEvent>
+                            transactionsUpToToday = sourceData.transactionsUpToToday,
+                            transactionsBeforeMonth = sourceData.transactionsBeforeMonth,
+                            monthTransactions = sourceData.monthTransactions,
+                            monthEvents = sourceData.monthEvents,
+                            allGoals = sourceData.allGoals,
+                            importedEvents = importedEvents
                         )
                     )
                 }.collect { calendarUiState ->

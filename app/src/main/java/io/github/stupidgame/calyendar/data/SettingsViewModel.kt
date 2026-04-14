@@ -5,13 +5,9 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import io.github.stupidgame.calyendar.utils.EventNotificationManager
-import java.io.IOException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 data class SettingsUiState(
     val webCalUrl: String = "",
@@ -28,9 +24,8 @@ data class SettingsUiState(
 }
 
 class SettingsViewModel(
-    private val repository: CalYendarRepository,
     private val settingsStore: AppSettingsStore,
-    private val notificationManager: EventNotificationManager
+    private val backupService: UserDataBackupService
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(settingsStore.getSettings().toUiState())
     val uiState = _uiState.asStateFlow()
@@ -57,63 +52,25 @@ class SettingsViewModel(
 
     fun exportCsv(uri: Uri, contentResolver: ContentResolver, onResult: (String) -> Unit) {
         viewModelScope.launch {
-            val result =
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                        val backupData =
-                            CsvBackupData(
-                                settings = _uiState.value.toAppSettings(),
-                                events = repository.getAllEventsSnapshot(),
-                                transactions = repository.getAllTransactionsSnapshot(),
-                                goals = repository.getAllGoalsSnapshot()
-                            )
-
-                        contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
-                                writer.write(CsvBackupCodec.encode(backupData))
-                            }
-                        } ?: throw IOException("書き出し先を開けませんでした。")
-
-                        "バックアップを書き出しました。イベント${backupData.events.size}件、取引${backupData.transactions.size}件、目標${backupData.goals.size}件です。"
-                    }
-                }
-
-            onResult(result.getOrDefault(result.exceptionOrNull()?.message ?: "不明なエラーが発生しました。"))
+            val result = backupService.exportCsv(uri, contentResolver, _uiState.value.toAppSettings())
+            onResult(
+                result.fold(
+                    onSuccess = { it.toExportMessage() },
+                    onFailure = { it.message ?: "Backup export failed." }
+                )
+            )
         }
     }
 
     fun importCsv(uri: Uri, contentResolver: ContentResolver, onResult: (String) -> Unit) {
         viewModelScope.launch {
-            val result =
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                        val csvContent =
-                            contentResolver.openInputStream(uri)?.use { inputStream ->
-                                inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                            } ?: throw IOException("バックアップファイルを開けませんでした。")
-
-                        val backupData = CsvBackupCodec.decode(csvContent)
-                        val existingEvents = repository.getAllEventsSnapshot()
-
-                        try {
-                            existingEvents.forEach(notificationManager::cancelEventNotification)
-                            repository.replaceUserData(
-                                transactions = backupData.transactions,
-                                events = backupData.events,
-                                goals = backupData.goals
-                            )
-                            settingsStore.updateSettings(backupData.settings)
-                            backupData.events.forEach(notificationManager::scheduleEventNotification)
-                        } catch (exception: Exception) {
-                            existingEvents.forEach(notificationManager::scheduleEventNotification)
-                            throw exception
-                        }
-
-                        "バックアップを読み込みました。イベント${backupData.events.size}件、取引${backupData.transactions.size}件、目標${backupData.goals.size}件です。"
-                    }
-                }
-
-            onResult(result.getOrDefault(result.exceptionOrNull()?.message ?: "不明なエラーが発生しました。"))
+            val result = backupService.importCsv(uri, contentResolver)
+            onResult(
+                result.fold(
+                    onSuccess = { it.toImportMessage() },
+                    onFailure = { it.message ?: "Backup import failed." }
+                )
+            )
         }
     }
 
@@ -125,14 +82,13 @@ class SettingsViewModel(
 }
 
 class SettingsViewModelFactory(
-    private val repository: CalYendarRepository,
     private val settingsStore: AppSettingsStore,
-    private val notificationManager: EventNotificationManager
+    private val backupService: UserDataBackupService
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return SettingsViewModel(repository, settingsStore, notificationManager) as T
+            return SettingsViewModel(settingsStore, backupService) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
@@ -145,3 +101,9 @@ private fun AppSettings.toUiState(): SettingsUiState {
         notificationOneHourBefore = notificationOneHourBefore
     )
 }
+
+private fun BackupSummary.toExportMessage(): String =
+    "Backup exported: $events events, $transactions transactions, $goals goals."
+
+private fun BackupSummary.toImportMessage(): String =
+    "Backup imported: $events events, $transactions transactions, $goals goals."

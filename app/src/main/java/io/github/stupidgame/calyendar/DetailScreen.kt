@@ -48,12 +48,12 @@ import io.github.stupidgame.calyendar.data.FinancialGoal
 import io.github.stupidgame.calyendar.data.ImportedEvent
 import io.github.stupidgame.calyendar.data.Transaction
 import io.github.stupidgame.calyendar.data.TransactionType
+import io.github.stupidgame.calyendar.data.toNotificationStorage
 import io.github.stupidgame.calyendar.ui.components.EventCard
 import io.github.stupidgame.calyendar.ui.components.IcalEventCard
 import io.github.stupidgame.calyendar.ui.components.CurrentBalanceCard
 import io.github.stupidgame.calyendar.ui.components.SummaryCard
 import io.github.stupidgame.calyendar.ui.components.TransactionCard
-import io.github.stupidgame.calyendar.utils.EventNotificationManager
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -130,7 +130,7 @@ fun DetailScreen(
                     startTime = startMillis,
                     endTime = endMillis,
                     notificationMinutesBefore = -1L,
-                    notifications = notifications.joinToString(","),
+                    notifications = notifications.toNotificationStorage(),
                     isHoliday = isHoliday
                 )
 
@@ -480,7 +480,6 @@ fun DetailScreen(
 fun RealDetailScreen(year: Int, month: Int, day: Int) {
     val context = LocalContext.current
     val application = context.applicationContext as CalYendarApplication
-    val notificationManager = remember { EventNotificationManager(application) }
     val settings by
         application.appSettingsStore.settingsFlow.collectAsState(
             initial = application.appSettingsStore.getSettings()
@@ -490,7 +489,7 @@ fun RealDetailScreen(year: Int, month: Int, day: Int) {
             factory =
                 DetailViewModelFactory(
                     application.repository,
-                    notificationManager,
+                    application.eventSyncService,
                     year,
                     month,
                     day

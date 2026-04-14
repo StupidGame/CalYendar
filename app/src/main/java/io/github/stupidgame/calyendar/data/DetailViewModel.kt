@@ -3,7 +3,6 @@ package io.github.stupidgame.calyendar.data
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import io.github.stupidgame.calyendar.utils.EventNotificationManager
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -25,7 +24,7 @@ data class DetailUiState(
 
 class DetailViewModel(
     private val repository: CalYendarRepository,
-    private val notificationManager: EventNotificationManager,
+    private val eventSyncService: EventSyncService,
     val year: Int,
     val month: Int,
     val day: Int
@@ -93,7 +92,7 @@ class DetailViewModel(
 
     fun upsertEvent(event: Event) {
         viewModelScope.launch {
-            upsertAndSchedule(listOf(event))
+            eventSyncService.upsertEvent(event)
         }
     }
 
@@ -104,21 +103,13 @@ class DetailViewModel(
         repeatDays: Set<Int>
     ) {
         viewModelScope.launch {
-            upsertAndSchedule(
-                RecurringEventGenerator.generate(
-                    baseEvent = event,
-                    repeatType = repeatType,
-                    repeatUntil = repeatUntil,
-                    repeatDays = repeatDays
-                )
-            )
+            eventSyncService.upsertRepeatedEvent(event, repeatType, repeatUntil, repeatDays)
         }
     }
 
     fun deleteEvent(event: Event) {
         viewModelScope.launch {
-            notificationManager.cancelEventNotification(event)
-            repository.deleteEvent(event)
+            eventSyncService.deleteEvent(event)
         }
     }
 
@@ -133,18 +124,11 @@ class DetailViewModel(
             repository.clearImportedEvents()
         }
     }
-
-    private suspend fun upsertAndSchedule(events: List<Event>) {
-        events.forEach { instance ->
-            val id = repository.upsertEvent(instance)
-            notificationManager.scheduleEventNotification(instance.copy(id = id))
-        }
-    }
 }
 
 class DetailViewModelFactory(
     private val repository: CalYendarRepository,
-    private val notificationManager: EventNotificationManager,
+    private val eventSyncService: EventSyncService,
     private val year: Int,
     private val month: Int,
     private val day: Int
@@ -152,7 +136,7 @@ class DetailViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DetailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return DetailViewModel(repository, notificationManager, year, month, day) as T
+            return DetailViewModel(repository, eventSyncService, year, month, day) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
