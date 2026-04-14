@@ -65,6 +65,9 @@ interface CalYendarDao {
     @Upsert
     suspend fun upsertEvents(events: List<Event>)
 
+    @Query("SELECT * FROM events WHERE id = :id LIMIT 1")
+    suspend fun getEventById(id: Long): Event?
+
     @Delete
     suspend fun deleteEvent(event: Event)
 
@@ -86,6 +89,9 @@ interface CalYendarDao {
     @Delete
     suspend fun deleteImportedEvent(event: ImportedEvent)
 
+    @Delete
+    suspend fun deleteImportedEvents(events: List<ImportedEvent>)
+
     @Query("DELETE FROM imported_events WHERE isHoliday = 0")
     suspend fun clearImportedEvents()
 
@@ -94,4 +100,7 @@ interface CalYendarDao {
 
     @Query("SELECT * FROM imported_events")
     fun getImportedEvents(): Flow<List<ImportedEvent>>
+
+    @Query("SELECT * FROM imported_events ORDER BY id ASC")
+    suspend fun getImportedEventsSnapshot(): List<ImportedEvent>
 }

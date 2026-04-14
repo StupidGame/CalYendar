@@ -60,6 +60,9 @@ class CalYendarRepository(private val database: CalYendarDatabase) {
     suspend fun getAllEventsSnapshot(): List<Event> =
         withContext(Dispatchers.IO) { dao.getAllEventsSnapshot() }
 
+    suspend fun getEventById(id: Long): Event? =
+        withContext(Dispatchers.IO) { dao.getEventById(id) }
+
     suspend fun upsertEvent(event: Event): Long = dao.upsertEvent(event)
 
     suspend fun deleteEvent(event: Event) = dao.deleteEvent(event)
@@ -89,6 +92,9 @@ class CalYendarRepository(private val database: CalYendarDatabase) {
     }
 
     fun getImportedEvents(): Flow<List<ImportedEvent>> = dao.getImportedEvents()
+
+    suspend fun getImportedEventsSnapshot(): List<ImportedEvent> =
+        withContext(Dispatchers.IO) { dao.getImportedEventsSnapshot() }
 
     suspend fun upsertImportedEvents(events: List<ImportedEvent>) = dao.upsertImportedEvents(events)
 
@@ -140,7 +146,7 @@ class CalYendarRepository(private val database: CalYendarDatabase) {
                     val events = ical.events.map { event ->
                         ImportedEvent(event = event, isHoliday = false)
                     }
-                    dao.upsertImportedEvents(events)
+                    replaceMatchingImportedEvents(events)
                     "カレンダーを読み込みました。"
                 } ?: throw IOException("ファイルを開けませんでした。")
             }
@@ -166,10 +172,23 @@ class CalYendarRepository(private val database: CalYendarDatabase) {
                     val events = ical.events.map { event ->
                         ImportedEvent(event = event, isHoliday = false)
                     }
-                    dao.upsertImportedEvents(events)
+                    replaceMatchingImportedEvents(events)
                     "カレンダーを読み込みました。"
                 }
             }
+        }
+    }
+
+    private suspend fun replaceMatchingImportedEvents(incomingEvents: List<ImportedEvent>) {
+        val deduplicatedIncomingEvents = incomingEvents.distinctBy(ImportedEvent::identityKey)
+        val existingEventsToReplace =
+            importedEventsToReplace(dao.getImportedEventsSnapshot(), deduplicatedIncomingEvents)
+
+        if (existingEventsToReplace.isNotEmpty()) {
+            dao.deleteImportedEvents(existingEventsToReplace)
+        }
+        if (deduplicatedIncomingEvents.isNotEmpty()) {
+            dao.upsertImportedEvents(deduplicatedIncomingEvents)
         }
     }
 }

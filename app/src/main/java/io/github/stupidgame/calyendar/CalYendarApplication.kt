@@ -12,6 +12,10 @@ import io.github.stupidgame.calyendar.data.EventSyncService
 import io.github.stupidgame.calyendar.data.UserDataBackupService
 import io.github.stupidgame.calyendar.utils.EventNotificationManager
 import io.github.stupidgame.calyendar.widget.BalanceGoalWidgetSyncManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class CalYendarApplication : Application() {
     val database: CalYendarDatabase by lazy { CalYendarDatabase.getDatabase(this) }
@@ -27,11 +31,15 @@ class CalYendarApplication : Application() {
     private val balanceGoalWidgetSyncManager by lazy {
         BalanceGoalWidgetSyncManager(this, database)
     }
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         balanceGoalWidgetSyncManager.start()
+        applicationScope.launch {
+            eventSyncService.rescheduleAllEventNotifications()
+        }
     }
 
     private fun createNotificationChannel() {

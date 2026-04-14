@@ -10,7 +10,7 @@ import biweekly.Biweekly
 import biweekly.ICalendar
 import biweekly.component.VEvent
 
-@Database(entities = [Transaction::class, Event::class, FinancialGoal::class, ImportedEvent::class], version = 1, exportSchema = false)
+@Database(entities = [Transaction::class, Event::class, FinancialGoal::class, ImportedEvent::class], version = 1, exportSchema = true)
 @TypeConverters(VEventConverter::class)
 abstract class CalYendarDatabase : RoomDatabase() {
     abstract fun calyendarDao(): CalYendarDao
@@ -26,8 +26,6 @@ abstract class CalYendarDatabase : RoomDatabase() {
                     CalYendarDatabase::class.java,
                     "calyendar_database"
                 )
-                .fallbackToDestructiveMigration()
-                .fallbackToDestructiveMigrationOnDowngrade()
                 .build()
                 INSTANCE = instance
                 instance
