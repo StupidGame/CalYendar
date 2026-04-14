@@ -51,7 +51,6 @@ import io.github.stupidgame.calyendar.data.CalendarViewModelFactory
 import io.github.stupidgame.calyendar.data.SettingsViewModel
 import io.github.stupidgame.calyendar.data.SettingsViewModelFactory
 import io.github.stupidgame.calyendar.ui.theme.CalYendarTheme
-import io.github.stupidgame.calyendar.utils.EventNotificationManager
 import java.time.LocalDate
 import kotlinx.coroutines.launch
 
@@ -147,9 +146,8 @@ fun CalYendarApp() {
         viewModel(
             factory =
                 SettingsViewModelFactory(
-                    app.repository,
                     app.appSettingsStore,
-                    EventNotificationManager(app)
+                    app.userDataBackupService
                 )
         )
 

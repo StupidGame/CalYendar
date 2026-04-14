@@ -47,6 +47,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.stupidgame.calyendar.data.Event
 import io.github.stupidgame.calyendar.data.EventRepeatType
+import io.github.stupidgame.calyendar.data.normalizedNotificationLeadTimes
+import io.github.stupidgame.calyendar.data.notificationLeadTimes
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -121,13 +123,7 @@ fun AddEventDialog(
     // Notifications state
     var notifications: List<Long> by remember {
         mutableStateOf(
-            if (event != null && event.notifications.isNotBlank()) {
-                event.notifications.split(",").mapNotNull { it.toLongOrNull() }
-            } else if (event != null && event.notificationMinutesBefore != -1L) {
-                listOf(event.notificationMinutesBefore)
-            } else {
-                defaultNotifications.distinct()
-            }
+            event?.notificationLeadTimes() ?: defaultNotifications.normalizedNotificationLeadTimes()
         )
     }
 
@@ -312,7 +308,8 @@ fun AddEventDialog(
                             }
                         }
                         if (minutesToAdd > 0 && !notifications.contains(minutesToAdd)) {
-                            notifications = notifications + minutesToAdd
+                            notifications =
+                                (notifications + minutesToAdd).normalizedNotificationLeadTimes()
                         }
                     }) {
                         Text("追加")

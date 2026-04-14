@@ -8,12 +8,22 @@ import android.os.Build
 import io.github.stupidgame.calyendar.data.AppSettingsStore
 import io.github.stupidgame.calyendar.data.CalYendarDatabase
 import io.github.stupidgame.calyendar.data.CalYendarRepository
+import io.github.stupidgame.calyendar.data.EventSyncService
+import io.github.stupidgame.calyendar.data.UserDataBackupService
+import io.github.stupidgame.calyendar.utils.EventNotificationManager
 import io.github.stupidgame.calyendar.widget.BalanceGoalWidgetSyncManager
 
 class CalYendarApplication : Application() {
     val database: CalYendarDatabase by lazy { CalYendarDatabase.getDatabase(this) }
     val repository: CalYendarRepository by lazy { CalYendarRepository(database) }
     val appSettingsStore: AppSettingsStore by lazy { AppSettingsStore(this) }
+    val eventNotificationManager: EventNotificationManager by lazy { EventNotificationManager(this) }
+    val eventSyncService: EventSyncService by lazy {
+        EventSyncService(repository, eventNotificationManager)
+    }
+    val userDataBackupService: UserDataBackupService by lazy {
+        UserDataBackupService(repository, appSettingsStore, eventSyncService)
+    }
     private val balanceGoalWidgetSyncManager by lazy {
         BalanceGoalWidgetSyncManager(this, database)
     }
