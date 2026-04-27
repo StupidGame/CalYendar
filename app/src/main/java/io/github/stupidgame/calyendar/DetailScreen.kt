@@ -192,10 +192,10 @@ fun DetailScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                CurrentBalanceCard(balance = uiState.balanceAfterCompletedGoals)
+                CurrentBalanceCard(balance = uiState.currentBalance)
                 Spacer(modifier = Modifier.height(16.dp))
                 SummaryCard(
-                    displayBalance = uiState.summaryBalance,
+                    displayBalance = uiState.currentBalance,
                     goal = uiState.goal,
                     totalGoalCost = uiState.totalGoalCost,
                     onLongClick = { uiState.goal?.let { deleteTarget = it } },

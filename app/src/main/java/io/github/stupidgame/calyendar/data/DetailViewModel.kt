@@ -10,17 +10,12 @@ import kotlinx.coroutines.launch
 
 data class DetailUiState(
     val currentBalance: Long = 0L,
-    val balanceAfterCompletedGoals: Long = 0L,
     val goal: FinancialGoal? = null,
     val dailyTransactions: List<Transaction> = emptyList(),
     val events: List<Event> = emptyList(),
     val icalEvents: List<ImportedEvent> = emptyList(),
-    val comparisonBalance: Long? = null,
     val totalGoalCost: Long = 0L
-) {
-    val summaryBalance: Long
-        get() = comparisonBalance ?: currentBalance
-}
+)
 
 class DetailViewModel(
     private val repository: CalYendarRepository,
@@ -41,12 +36,6 @@ class DetailViewModel(
             repository.getImportedEvents()
         ) { allTransactions, allGoals, dailyEvents, dailyTransactions, importedEvents ->
             val currentBalance = FinancialCalculator.calculateDailyBalance(allTransactions)
-            val balanceAfterCompletedGoals =
-                FinancialCalculator.calculateBalanceAfterCompletedGoals(
-                    currentBalance = currentBalance,
-                    allGoals = allGoals,
-                    currentDate = currentDate
-                )
             val prediction =
                 FinancialCalculator.calculatePrediction(
                     currentBalance = currentBalance,
@@ -56,12 +45,10 @@ class DetailViewModel(
 
             DetailUiState(
                 currentBalance = currentBalance,
-                balanceAfterCompletedGoals = balanceAfterCompletedGoals,
                 goal = prediction.upcomingGoal,
                 dailyTransactions = dailyTransactions,
                 events = dailyEvents,
                 icalEvents = importedEvents.filterByStartLocalDate(currentDate),
-                comparisonBalance = prediction.predictionDiff,
                 totalGoalCost = prediction.totalPriorGoalCost
             )
         }

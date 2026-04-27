@@ -123,11 +123,11 @@ class BalanceGoalWidgetProvider : AppWidgetProvider() {
 
             remoteViews.setTextViewText(
                 R.id.widget_balance_amount,
-                context.getString(R.string.widget_yen_amount, snapshot.comparisonBalance)
+                context.getString(R.string.widget_yen_amount, snapshot.currentBalance)
             )
             remoteViews.setTextColor(
                 R.id.widget_balance_amount,
-                if (snapshot.comparisonBalance >= 0) {
+                if (snapshot.currentBalance >= 0) {
                     Color.parseColor("#2E7D32")
                 } else {
                     Color.parseColor("#C62828")

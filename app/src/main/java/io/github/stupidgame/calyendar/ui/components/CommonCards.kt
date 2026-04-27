@@ -273,7 +273,11 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
 
         if (activeMonthGoals.isEmpty()) {
                 val availableMoney =
-                        if (uiState.isCurrentMonth) uiState.todayBalance else uiState.currentBalance
+                        if (uiState.isCurrentMonth) {
+                                uiState.todayAvailableBalance
+                        } else {
+                                uiState.availableMoneyAfterMonthGoals
+                        }
                 val cardColor = if (availableMoney >= 0) Color(0xFFA5D6A7) else Color(0xFFEF9A9A)
                 val contentColor = if (cardColor.luminance() > 0.5f) Color.Black else Color.White
 
@@ -314,11 +318,15 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
 
         val goalsInMonth = activeMonthGoals
         val totalGoalInMonth = goalsInMonth.sumOf { it.amount }
-        val difference = uiState.currentBalance - totalGoalInMonth
+        val difference = uiState.goalComparisonBalance - totalGoalInMonth
 
         val cardColor by
                 animateColorAsState(
-                        targetValue = getGradientColor(uiState.currentBalance, totalGoalInMonth),
+                        targetValue =
+                                getGradientColor(
+                                        uiState.goalComparisonBalance,
+                                        totalGoalInMonth
+                                ),
                         label = ""
                 )
         val contentColor =
@@ -372,8 +380,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                         ) {
                                 Text("最後の目標までの残高", color = contentColor)
                                 val balanceColor =
-                                        if (uiState.currentBalance >= totalGoalInMonth)
-                                                Color(0xFF2E7D32)
+                                        if (uiState.currentBalance >= 0) Color(0xFF2E7D32)
                                         else Color(0xFFC62828)
                                 Text(
                                         "%,d".format(uiState.currentBalance),

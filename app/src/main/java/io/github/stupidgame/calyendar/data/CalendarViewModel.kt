@@ -29,6 +29,8 @@ data class CalendarUiState(
     val dayStates: Map<Int, DayState> = emptyMap(),
     val currentBalance: Long = 0L,
     val todayBalance: Long = 0L,
+    val todayAvailableBalance: Long = 0L,
+    val goalComparisonBalance: Long = 0L,
     val monthGoals: List<FinancialGoal> = emptyList(),
     val activeMonthGoals: List<FinancialGoal> = emptyList(),
     val availableMoneyAfterMonthGoals: Long = 0L,

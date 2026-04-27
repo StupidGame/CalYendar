@@ -172,7 +172,7 @@ fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
                         contentAlignment = Alignment.Center
                 ) {
                     if (predictionDiff != null && dayState.goal != null) {
-                        val surplus = predictionDiff - dayState.goal.amount
+                        val surplus = predictionDiff
                         val prefix = if (surplus >= 0) "余" else "不"
                         val predictionTextColor =
                                 if (surplus >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
