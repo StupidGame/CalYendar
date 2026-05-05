@@ -48,7 +48,7 @@ class CalendarMonthUiStateFactoryTest {
         assertEquals(130L, state.todayBalance)
         assertEquals(70L, state.todayAvailableBalance)
         assertEquals(120L, state.currentBalance)
-        assertEquals(90L, state.goalComparisonBalance)
+        assertEquals(120L, state.goalComparisonBalance)
         assertEquals(150L, state.dayStates.getValue(1).balance)
         assertEquals(130L, state.dayStates.getValue(2).balance)
         assertEquals(120L, state.dayStates.getValue(3).balance)
@@ -91,7 +91,7 @@ class CalendarMonthUiStateFactoryTest {
     }
 
     @Test
-    fun `subtracts completed goals in current month before comparing active month goals`() {
+    fun `ignores goals before today before comparing active month goals`() {
         val input =
             CalendarMonthUiStateInput(
                 year = 2026,
@@ -121,7 +121,7 @@ class CalendarMonthUiStateFactoryTest {
         assertEquals(150L, state.todayBalance)
         assertEquals(90L, state.todayAvailableBalance)
         assertEquals(150L, state.currentBalance)
-        assertEquals(100L, state.goalComparisonBalance)
+        assertEquals(150L, state.goalComparisonBalance)
         assertEquals(1, state.activeMonthGoals.size)
     }
 
@@ -156,7 +156,7 @@ class CalendarMonthUiStateFactoryTest {
     }
 
     @Test
-    fun `cell surplus after completed month goals reserves only the next goal`() {
+    fun `cell display ignores goals before today and uses the next goal amount`() {
         val input =
             CalendarMonthUiStateInput(
                 year = 2026,
@@ -184,6 +184,73 @@ class CalendarMonthUiStateFactoryTest {
         assertEquals(120L, todayCell.predictionDiff)
         assertEquals("goal-5", todayCell.goal?.name)
         assertEquals(80L, todayCell.goal?.amount)
+        assertEquals(80L, todayCell.goalTargetAmount)
+    }
+
+    @Test
+    fun `cell display subtracts earlier future goals before comparing later goals`() {
+        val input =
+            CalendarMonthUiStateInput(
+                year = 2026,
+                month = 2,
+                today = LocalDate.of(2026, 3, 1),
+                transactionsUpToToday =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 5_000)),
+                transactionsBeforeMonth = emptyList(),
+                monthTransactions =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 5_000)),
+                monthEvents = emptyList(),
+                allGoals =
+                    listOf(
+                        goal(LocalDate.of(2026, 3, 15), amount = 1_000),
+                        goal(LocalDate.of(2026, 4, 5), amount = 3_000)
+                    ),
+                importedEvents = emptyList()
+            )
+
+        val state = CalendarMonthUiStateFactory.create(input)
+        val beforeFirstGoalCell = state.dayStates.getValue(14)
+        val firstGoalDateCell = state.dayStates.getValue(15)
+        val afterFirstGoalCell = state.dayStates.getValue(16)
+
+        assertEquals("goal-15", beforeFirstGoalCell.goal?.name)
+        assertEquals(1_000L, beforeFirstGoalCell.goalTargetAmount)
+        assertEquals(4_000L, beforeFirstGoalCell.predictionDiff)
+        assertEquals(4_000L, firstGoalDateCell.balance)
+        assertEquals("goal-5", firstGoalDateCell.goal?.name)
+        assertEquals(1_000L, firstGoalDateCell.predictionDiff)
+        assertEquals("goal-5", afterFirstGoalCell.goal?.name)
+        assertEquals(3_000L, afterFirstGoalCell.goalTargetAmount)
+        assertEquals(1_000L, afterFirstGoalCell.predictionDiff)
+    }
+
+    @Test
+    fun `cell display ignores goals before today across month boundaries`() {
+        val input =
+            CalendarMonthUiStateInput(
+                year = 2026,
+                month = 3,
+                today = LocalDate.of(2026, 4, 5),
+                transactionsUpToToday =
+                    listOf(transaction(LocalDate.of(2026, 4, 1), TransactionType.INCOME, 250)),
+                transactionsBeforeMonth = emptyList(),
+                monthTransactions =
+                    listOf(transaction(LocalDate.of(2026, 4, 1), TransactionType.INCOME, 250)),
+                monthEvents = emptyList(),
+                allGoals =
+                    listOf(
+                        goal(LocalDate.of(2026, 3, 28), amount = 120),
+                        goal(LocalDate.of(2026, 4, 10), amount = 200)
+                    ),
+                importedEvents = emptyList()
+            )
+
+        val state = CalendarMonthUiStateFactory.create(input)
+        val dayCell = state.dayStates.getValue(5)
+
+        assertEquals("goal-10", dayCell.goal?.name)
+        assertEquals(50L, dayCell.predictionDiff)
+        assertEquals(200L, dayCell.goalTargetAmount)
     }
 
     private fun transaction(

@@ -58,9 +58,10 @@ fun SummaryCard(
                 elevation = CardDefaults.cardElevation(4.dp)
         ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                        val goalTargetAmount =
+                                if (goal != null) totalGoalCost + goal.amount else null
                         Text(text = "現時点で使える金額", style = MaterialTheme.typography.titleMedium)
-                        val displayAmount =
-                                if (goal != null) displayBalance - goal.amount else displayBalance
+                        val displayAmount = displayBalance
                         Text(
                                 text = "%,d".format(displayAmount),
                                 style = MaterialTheme.typography.headlineLarge,
@@ -71,12 +72,13 @@ fun SummaryCard(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         if (goal != null) {
+                                val goalTarget = goalTargetAmount ?: goal.amount
                                 // 百分率を決定
                                 // ロジック: (現在の残高) / (目標金額)
                                 // 注: predictionBalanceを渡す場合、'displayBalance'には事前に目標が引かれている可能性がある
                                 val percentage =
-                                        if (goal.amount > 0)
-                                                (displayBalance.toFloat() / goal.amount.toFloat())
+                                        if (goalTarget > 0)
+                                                (displayBalance.toFloat() / goalTarget.toFloat())
                                         else if (displayBalance >= 0) 1f else 0f
 
                                 val cardColor =
@@ -117,7 +119,7 @@ fun SummaryCard(
                                         Text(text = "達成率: %.0f".format(percentage * 100) + "%")
                                         Text(text = "目標: %,d".format(goal.amount))
                                 }
-                                val difference = displayBalance - goal.amount
+                                val difference = displayBalance - goalTarget
 
                                 val diffColor =
                                         when {
@@ -319,13 +321,14 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
         val goalsInMonth = activeMonthGoals
         val totalGoalInMonth = goalsInMonth.sumOf { it.amount }
         val difference = uiState.goalComparisonBalance - totalGoalInMonth
+        val cumulativeTargetAmount = uiState.currentBalance - difference
 
         val cardColor by
                 animateColorAsState(
                         targetValue =
                                 getGradientColor(
-                                        uiState.goalComparisonBalance,
-                                        totalGoalInMonth
+                                        uiState.currentBalance,
+                                        cumulativeTargetAmount
                                 ),
                         label = ""
                 )

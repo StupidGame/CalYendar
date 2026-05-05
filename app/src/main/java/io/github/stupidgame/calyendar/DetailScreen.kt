@@ -50,9 +50,9 @@ import io.github.stupidgame.calyendar.data.Transaction
 import io.github.stupidgame.calyendar.data.TransactionType
 import io.github.stupidgame.calyendar.data.toNotificationStorage
 import io.github.stupidgame.calyendar.ui.components.EventCard
+import io.github.stupidgame.calyendar.ui.components.DetailGoalSummaryCard
 import io.github.stupidgame.calyendar.ui.components.IcalEventCard
 import io.github.stupidgame.calyendar.ui.components.CurrentBalanceCard
-import io.github.stupidgame.calyendar.ui.components.SummaryCard
 import io.github.stupidgame.calyendar.ui.components.TransactionCard
 import java.time.LocalDate
 import java.time.LocalTime
@@ -194,7 +194,7 @@ fun DetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 CurrentBalanceCard(balance = uiState.currentBalance)
                 Spacer(modifier = Modifier.height(16.dp))
-                SummaryCard(
+                DetailGoalSummaryCard(
                     displayBalance = uiState.currentBalance,
                     goal = uiState.goal,
                     totalGoalCost = uiState.totalGoalCost,

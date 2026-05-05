@@ -136,6 +136,7 @@ class BalanceGoalWidgetProvider : AppWidgetProvider() {
 
             val nextGoal = snapshot.nextGoal
             if (nextGoal != null) {
+                val targetAmount = snapshot.nextGoalTargetAmount ?: nextGoal.amount
                 remoteViews.setTextColor(R.id.widget_goal_name, Color.parseColor("#1C1B1F"))
                 remoteViews.setTextColor(R.id.widget_goal_amount, Color.parseColor("#6650A4"))
                 remoteViews.setTextViewText(
@@ -149,7 +150,7 @@ class BalanceGoalWidgetProvider : AppWidgetProvider() {
                 )
                 remoteViews.setTextViewText(
                     R.id.widget_goal_amount,
-                    context.getString(R.string.widget_yen_amount, nextGoal.amount)
+                    context.getString(R.string.widget_yen_amount, targetAmount)
                 )
                 remoteViews.setViewVisibility(R.id.widget_goal_amount, View.VISIBLE)
             } else {

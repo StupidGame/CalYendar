@@ -16,6 +16,7 @@ data class DayState(
     val dayOfMonth: Int,
     val balance: Long,
     val goal: FinancialGoal?,
+    val goalTargetAmount: Long? = null,
     val events: List<Event>,
     val transactions: List<Transaction>,
     val icalEvents: List<ImportedEvent> = emptyList(),

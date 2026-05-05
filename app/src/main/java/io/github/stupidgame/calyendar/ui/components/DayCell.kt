@@ -41,86 +41,94 @@ import androidx.compose.ui.unit.sp
 import io.github.stupidgame.calyendar.data.DayState
 import io.github.stupidgame.calyendar.data.TransactionType
 import java.util.Calendar
+import kotlin.math.abs
 
 @Composable
 fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
     val predictionDiff = dayState.predictionDiff
+    val goalTargetAmount = dayState.goalTargetAmount ?: dayState.goal?.amount
+    val comparisonBalance =
+        if (predictionDiff != null && goalTargetAmount != null) {
+            predictionDiff + goalTargetAmount
+        } else {
+            dayState.balance
+        }
 
     val cardColor =
-            when {
-                predictionDiff != null && dayState.goal != null -> {
-                    getGradientColor(predictionDiff, dayState.goal.amount)
-                }
-                else -> MaterialTheme.colorScheme.surface
+        when {
+            predictionDiff != null && goalTargetAmount != null -> {
+                getGradientColor(comparisonBalance, goalTargetAmount)
             }
+            else -> MaterialTheme.colorScheme.surface
+        }
     val contentColor = if (cardColor.luminance() > 0.5f) Color.Black else Color.White
 
     val calendar = Calendar.getInstance().apply { set(year, month, dayState.dayOfMonth) }
     val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
 
     val dateTextColor =
-            when {
-                dayState.isHoliday || dayOfWeek == Calendar.SUNDAY -> Color(0xFFD32F2F)
-                dayOfWeek == Calendar.SATURDAY -> Color(0xFF1976D2)
-                else -> contentColor
-            }
+        when {
+            dayState.isHoliday || dayOfWeek == Calendar.SUNDAY -> Color(0xFFD32F2F)
+            dayOfWeek == Calendar.SATURDAY -> Color(0xFF1976D2)
+            else -> contentColor
+        }
 
     val today = java.time.LocalDate.now()
     val currentDayDate = java.time.LocalDate.of(year, month + 1, dayState.dayOfMonth)
     val isToday = currentDayDate.isEqual(today)
 
     Card(
-            modifier =
-                    Modifier.padding(2.dp)
-                            .aspectRatio(1f)
-                            .let {
-                                if (isToday)
-                                        it.border(
-                                                3.dp,
-                                                MaterialTheme.colorScheme.primary,
-                                                RoundedCornerShape(12.dp)
-                                        )
-                                else it
-                            }
-                            .clickable(onClick = onClick),
-            colors = CardDefaults.cardColors(containerColor = cardColor),
-            shape = RoundedCornerShape(12.dp)
+        modifier =
+            Modifier.padding(2.dp)
+                .aspectRatio(1f)
+                .let {
+                    if (isToday) {
+                        it.border(
+                            3.dp,
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(12.dp)
+                        )
+                    } else {
+                        it
+                    }
+                }
+                .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
-                modifier =
-                        Modifier.fillMaxSize()
-                                .padding(start = 2.dp, end = 2.dp, bottom = 2.dp, top = 0.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(start = 2.dp, end = 2.dp, bottom = 2.dp, top = 0.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 日付とイベントの行
             Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 0.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth().padding(bottom = 0.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                        text = dayState.dayOfMonth.toString(),
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        fontSize = 12.sp,
-                        color = dateTextColor
+                    text = dayState.dayOfMonth.toString(),
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    fontSize = 12.sp,
+                    color = dateTextColor
                 )
 
-                // イベント (ドットインジケーター)
                 if (dayState.events.isNotEmpty() || dayState.icalEvents.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(4.dp))
                     Row(
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(1.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         repeat(dayState.events.size) {
                             Box(
-                                    modifier =
-                                            Modifier.size(4.dp)
-                                                    .background(
-                                                            MaterialTheme.colorScheme.primary,
-                                                            CircleShape
-                                                    )
+                                modifier =
+                                    Modifier.size(4.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.primary,
+                                            CircleShape
+                                        )
                             )
                         }
                         repeat(dayState.icalEvents.size) {
@@ -130,62 +138,59 @@ fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
                 }
             }
 
-            // 日付の下の分割エリア
             Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                // 上部：収入 / 支出
                 Box(
-                        modifier = Modifier.weight(2f).fillMaxWidth(),
-                        contentAlignment = Alignment.Center
+                    modifier = Modifier.weight(2f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
                     val income =
-                            dayState.transactions
-                                    .filter { it.type == TransactionType.INCOME }
-                                    .sumOf { it.amount }
+                        dayState.transactions
+                            .filter { it.type == TransactionType.INCOME }
+                            .sumOf { it.amount }
                     val expense =
-                            dayState.transactions
-                                    .filter { it.type == TransactionType.EXPENSE }
-                                    .sumOf { it.amount }
+                        dayState.transactions
+                            .filter { it.type == TransactionType.EXPENSE }
+                            .sumOf { it.amount }
 
                     if (income > 0 || expense > 0) {
-                        val incomeExpenseText = buildAnnotatedString {
-                            if (income > 0) {
-                                withStyle(style = SpanStyle(color = Color(0xFF2E7D32))) {
-                                    append("収+%,d".format(income))
+                        val incomeExpenseText =
+                            buildAnnotatedString {
+                                if (income > 0) {
+                                    withStyle(style = SpanStyle(color = Color(0xFF2E7D32))) {
+                                        append("収+%,d".format(income))
+                                    }
+                                }
+                                if (income > 0 && expense > 0) {
+                                    append("\n")
+                                }
+                                if (expense > 0) {
+                                    withStyle(style = SpanStyle(color = Color(0xFFC62828))) {
+                                        append("支-%,d".format(expense))
+                                    }
                                 }
                             }
-                            if (income > 0 && expense > 0) {
-                                append("\n")
-                            }
-                            if (expense > 0) {
-                                withStyle(style = SpanStyle(color = Color(0xFFC62828))) {
-                                    append("支-%,d".format(expense))
-                                }
-                            }
-                        }
                         AutoSizeAnnotatedText(text = incomeExpenseText)
                     }
                 }
 
-                // 下部：予測 / 目標差額
                 Box(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentAlignment = Alignment.Center
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    if (predictionDiff != null && dayState.goal != null) {
-                        val surplus = predictionDiff
-                        val prefix = if (surplus >= 0) "余" else "不"
+                    if (predictionDiff != null && goalTargetAmount != null) {
+                        val prefix = if (predictionDiff >= 0) "余" else "不"
                         val predictionTextColor =
-                                if (surplus >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
+                            if (predictionDiff >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
                         AutoSizeText(
-                                text = "%s: %,d".format(prefix, kotlin.math.abs(surplus)),
-                                color = predictionTextColor,
-                                maxLines = 1
+                            text = "%s: %,d".format(prefix, abs(predictionDiff)),
+                            color = predictionTextColor,
+                            maxLines = 1
                         )
-                    } else if (dayState.goal != null) {
+                    } else if (goalTargetAmount != null) {
                         AutoSizeText(
-                                text = "目標: %,d".format(dayState.goal.amount),
-                                color = contentColor,
-                                maxLines = 1
+                            text = "目標: %,d".format(goalTargetAmount),
+                            color = contentColor,
+                            maxLines = 1
                         )
                     }
                 }
@@ -194,81 +199,70 @@ fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
     }
 }
 
-/**
- * 目標達成率に基づいて色を返す。 rate = numerator / denominator
- * - rate < 0%: 赤
- * - 0% <= rate < 100%: 黄
- * - rate >= 100%: 緑
- */
 fun getGradientColor(numerator: Long, denominator: Long): Color {
     if (denominator <= 0L) {
         return if (numerator >= 0) Color(0xFFA5D6A7) else Color(0xFFEF9A9A)
     }
     val achievementRate = numerator.toFloat() / denominator.toFloat()
     return when {
-        achievementRate < 0f -> Color(0xFFEF9A9A) // パステルレッド
-        achievementRate < 1f -> Color(0xFFFFF9C4) // パステルイエロー
-        else -> Color(0xFFA5D6A7) // パステルグリーン
+        achievementRate < 0f -> Color(0xFFEF9A9A)
+        achievementRate < 1f -> Color(0xFFFFF9C4)
+        else -> Color(0xFFA5D6A7)
     }
 }
 
 @Composable
 fun AutoSizeAnnotatedText(
-        text: AnnotatedString,
-        modifier: Modifier = Modifier,
-        maxLines: Int = 2,
+    text: AnnotatedString,
+    modifier: Modifier = Modifier,
+    maxLines: Int = 2,
 ) {
-    var fontSize by
-            remember(text) { mutableStateOf(if (text.text.lines().size > 1) 6.sp else 8.sp) }
+    var fontSize by remember(text) { mutableStateOf(if (text.text.lines().size > 1) 6.sp else 8.sp) }
     var readyToDraw by remember(text) { mutableStateOf(false) }
 
     Text(
-            text = text,
-            modifier = modifier.drawWithContent { if (readyToDraw) drawContent() },
-            maxLines = maxLines,
-            fontSize = fontSize,
-            lineHeight = (fontSize.value * 1.0f).sp,
-            textAlign = TextAlign.Center,
-            onTextLayout = { textLayoutResult ->
-                if (textLayoutResult.hasVisualOverflow) {
-                    fontSize = (fontSize.value * 0.9f).sp
-                } else {
-                    if (!readyToDraw) {
-                        fontSize = (fontSize.value * 1.0f).sp
-                        readyToDraw = true
-                    }
-                }
+        text = text,
+        modifier = modifier.drawWithContent { if (readyToDraw) drawContent() },
+        maxLines = maxLines,
+        fontSize = fontSize,
+        lineHeight = (fontSize.value * 1.0f).sp,
+        textAlign = TextAlign.Center,
+        onTextLayout = { textLayoutResult ->
+            if (textLayoutResult.hasVisualOverflow) {
+                fontSize = (fontSize.value * 0.9f).sp
+            } else if (!readyToDraw) {
+                fontSize = (fontSize.value * 1.0f).sp
+                readyToDraw = true
             }
+        }
     )
 }
 
 @Composable
 fun AutoSizeText(
-        text: String,
-        modifier: Modifier = Modifier,
-        color: Color = Color.Unspecified,
-        maxLines: Int = 1,
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    maxLines: Int = 1,
 ) {
     var fontSize by remember(text) { mutableStateOf(7.sp) }
     var readyToDraw by remember(text) { mutableStateOf(false) }
 
     Text(
-            text = text,
-            modifier = modifier.drawWithContent { if (readyToDraw) drawContent() },
-            color = color,
-            maxLines = maxLines,
-            fontSize = fontSize,
-            lineHeight = (fontSize.value * 1.1f).sp,
-            textAlign = TextAlign.Center,
-            onTextLayout = { textLayoutResult ->
-                if (textLayoutResult.hasVisualOverflow) {
-                    fontSize = (fontSize.value * 0.9f).sp
-                } else {
-                    if (!readyToDraw) {
-                        fontSize = (fontSize.value * 0.9f).sp
-                        readyToDraw = true
-                    }
-                }
+        text = text,
+        modifier = modifier.drawWithContent { if (readyToDraw) drawContent() },
+        color = color,
+        maxLines = maxLines,
+        fontSize = fontSize,
+        lineHeight = (fontSize.value * 1.1f).sp,
+        textAlign = TextAlign.Center,
+        onTextLayout = { textLayoutResult ->
+            if (textLayoutResult.hasVisualOverflow) {
+                fontSize = (fontSize.value * 0.9f).sp
+            } else if (!readyToDraw) {
+                fontSize = (fontSize.value * 0.9f).sp
+                readyToDraw = true
             }
+        }
     )
 }
