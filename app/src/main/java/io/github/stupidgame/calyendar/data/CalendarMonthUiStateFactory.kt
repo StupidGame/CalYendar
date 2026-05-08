@@ -18,12 +18,23 @@ data class CalendarMonthUiStateInput(
 object CalendarMonthUiStateFactory {
 
     fun create(input: CalendarMonthUiStateInput): CalendarUiState {
-        val todayBalance = FinancialCalculator.calculateDailyBalance(input.transactionsUpToToday)
+        val rawTodayBalance = FinancialCalculator.calculateDailyBalance(input.transactionsUpToToday)
+        val todayProjection =
+            FinancialCalculator.calculateGoalProjection(
+                rawBalance = rawTodayBalance,
+                allGoals = input.allGoals,
+                currentDate = input.today,
+                goalWindowStartDate = input.today
+            )
+        val todayBalance = todayProjection.currentBalance
+        val todayAvailableBalance = todayProjection.predictionDiff ?: todayBalance
         val transactionsByDay = input.monthTransactions.groupBy(Transaction::day)
         val eventsByDay = input.monthEvents.groupBy(Event::day)
         val importedEventsByDate = input.importedEvents.groupByStartLocalDate()
         val monthGoals =
             input.allGoals.filter { goal -> goal.year == input.year && goal.month == input.month }
+        val activeMonthGoals =
+            monthGoals.filter { goal -> goal.toLocalDate().isAfter(input.today) }
 
         var runningBalance =
             FinancialCalculator.calculateDailyBalance(input.transactionsBeforeMonth)
@@ -37,22 +48,30 @@ object CalendarMonthUiStateFactory {
             val dailyImportedEvents = importedEventsByDate[currentDate].orEmpty()
 
             runningBalance += FinancialCalculator.calculateDailyBalance(dailyTransactions)
-            val prediction =
-                FinancialCalculator.calculatePrediction(
-                    currentBalance = runningBalance,
+            val projection =
+                FinancialCalculator.calculateGoalProjection(
+                    rawBalance = runningBalance,
                     allGoals = input.allGoals,
-                    currentDate = currentDate
+                    currentDate = currentDate,
+                    goalWindowStartDate = input.today
                 )
+            val displayedGoal =
+                projection.upcomingGoal?.takeIf { shouldDisplayGoal(currentDate, it, input.today) }
+            val predictionDiff =
+                displayedGoal?.let { projection.predictionDiff }?.takeIf {
+                    !currentDate.isBefore(input.today)
+                }
 
             dayStates[day] =
                 DayState(
                     dayOfMonth = day,
-                    balance = runningBalance,
-                    goal = prediction.upcomingGoal?.takeIf { shouldDisplayGoal(currentDate, it, input.today) },
+                    balance = projection.currentBalance,
+                    goal = displayedGoal,
+                    goalTargetAmount = displayedGoal?.let { projection.goalTargetAmount },
                     events = dailyEvents,
                     transactions = dailyTransactions,
                     icalEvents = dailyImportedEvents,
-                    predictionDiff = prediction.predictionDiff.takeIf { !currentDate.isBefore(input.today) },
+                    predictionDiff = predictionDiff,
                     isHoliday =
                         dailyImportedEvents.any(ImportedEvent::isHoliday) ||
                             dailyEvents.any(Event::isHoliday)
@@ -62,30 +81,46 @@ object CalendarMonthUiStateFactory {
         val totalMonthBalance =
             FinancialCalculator.calculateDailyBalance(input.transactionsBeforeMonth) +
                 FinancialCalculator.calculateDailyBalance(input.monthTransactions)
-        val activeMonthGoals =
-            monthGoals.filter { goal -> !goal.toLocalDate().isBefore(input.today) }
-        val lastGoalDay = monthGoals.maxOfOrNull(FinancialGoal::day) ?: daysInMonth
+        val lastGoalDay =
+            activeMonthGoals.maxOfOrNull(FinancialGoal::day)
+                ?: monthGoals.maxOfOrNull(FinancialGoal::day)
+                ?: daysInMonth
         val balanceUpToLastGoal =
             FinancialCalculator.calculateDailyBalance(input.transactionsBeforeMonth) +
                 FinancialCalculator.calculateDailyBalance(
                     input.monthTransactions.filter { transaction -> transaction.day <= lastGoalDay }
                 )
-        val displayedCurrentBalance =
-            balanceUpToLastGoal -
-                input.allGoals
-                    .filter { goal ->
-                        goal.toLocalDate().isBefore(LocalDate.of(input.year, input.month + 1, 1))
-                    }
-                    .sumOf(FinancialGoal::amount)
+        val firstActiveGoalDate = activeMonthGoals.minOfOrNull { goal -> goal.toLocalDate() }
+        val priorGoalCutoffDate =
+            firstActiveGoalDate ?: input.today
+        val goalComparisonBalance =
+            (
+                balanceUpToLastGoal -
+                    input.allGoals
+                        .filter { goal ->
+                            val goalDate = goal.toLocalDate()
+                            !goalDate.isBefore(input.today) &&
+                                goalDate.isBefore(priorGoalCutoffDate)
+                        }
+                        .sumOf(FinancialGoal::amount)
+            ).coerceAtLeast(0L)
+        val nextGoalAfterMonthGoals =
+            monthGoals
+                .maxOfOrNull { goal -> goal.toLocalDate() }
+                ?.let { lastMonthGoalDate ->
+                    input.allGoals
+                        .sortedWith(compareBy({ it.year }, { it.month }, { it.day }, { it.id }))
+                        .firstOrNull { goal -> goal.toLocalDate().isAfter(lastMonthGoalDate) }
+                }
+        val balanceAfterMonthGoals =
+            FinancialCalculator.calculateGoalProjection(
+                rawBalance = totalMonthBalance,
+                allGoals = input.allGoals,
+                currentDate = LocalDate.of(input.year, input.month + 1, daysInMonth),
+                goalWindowStartDate = input.today
+            ).currentBalance
         val availableMoneyAfterMonthGoals =
-            totalMonthBalance -
-                input.allGoals
-                    .filter { goal ->
-                        goal.toLocalDate().isBefore(
-                            LocalDate.of(input.year, input.month + 1, 1).plusMonths(1)
-                        )
-                    }
-                    .sumOf(FinancialGoal::amount)
+            balanceAfterMonthGoals - (nextGoalAfterMonthGoals?.amount ?: 0L)
         val isCurrentMonth =
             input.year == input.today.year && input.month == input.today.monthValue - 1
 
@@ -93,8 +128,10 @@ object CalendarMonthUiStateFactory {
             year = input.year,
             month = input.month,
             dayStates = dayStates,
-            currentBalance = displayedCurrentBalance,
+            currentBalance = goalComparisonBalance,
             todayBalance = todayBalance,
+            todayAvailableBalance = todayAvailableBalance,
+            goalComparisonBalance = goalComparisonBalance,
             monthGoals = monthGoals,
             activeMonthGoals = activeMonthGoals,
             availableMoneyAfterMonthGoals = availableMoneyAfterMonthGoals,

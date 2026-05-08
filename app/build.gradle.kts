@@ -68,6 +68,10 @@ android {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 base {
     val appId = android.defaultConfig.applicationId
     val vName = android.defaultConfig.versionName ?: "0.0"

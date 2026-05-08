@@ -10,17 +10,12 @@ import kotlinx.coroutines.launch
 
 data class DetailUiState(
     val currentBalance: Long = 0L,
-    val balanceAfterCompletedGoals: Long = 0L,
     val goal: FinancialGoal? = null,
     val dailyTransactions: List<Transaction> = emptyList(),
     val events: List<Event> = emptyList(),
     val icalEvents: List<ImportedEvent> = emptyList(),
-    val comparisonBalance: Long? = null,
     val totalGoalCost: Long = 0L
-) {
-    val summaryBalance: Long
-        get() = comparisonBalance ?: currentBalance
-}
+)
 
 class DetailViewModel(
     private val repository: CalYendarRepository,
@@ -40,29 +35,31 @@ class DetailViewModel(
             repository.getTransactionsForDate(year, month, day),
             repository.getImportedEvents()
         ) { allTransactions, allGoals, dailyEvents, dailyTransactions, importedEvents ->
-            val currentBalance = FinancialCalculator.calculateDailyBalance(allTransactions)
-            val balanceAfterCompletedGoals =
-                FinancialCalculator.calculateBalanceAfterCompletedGoals(
-                    currentBalance = currentBalance,
+            val rawCurrentBalance = FinancialCalculator.calculateDailyBalance(allTransactions)
+            val today = LocalDate.now()
+            val currentProjection =
+                FinancialCalculator.calculateGoalProjection(
+                    rawBalance = rawCurrentBalance,
                     allGoals = allGoals,
-                    currentDate = currentDate
+                    currentDate = currentDate,
+                    goalWindowStartDate = today
                 )
-            val prediction =
-                FinancialCalculator.calculatePrediction(
-                    currentBalance = currentBalance,
+            val predictionDate = if (currentDate.isBefore(today)) today else currentDate
+            val predictionProjection =
+                FinancialCalculator.calculateGoalProjection(
+                    rawBalance = rawCurrentBalance,
                     allGoals = allGoals,
-                    currentDate = currentDate
+                    currentDate = predictionDate,
+                    goalWindowStartDate = today
                 )
 
             DetailUiState(
-                currentBalance = currentBalance,
-                balanceAfterCompletedGoals = balanceAfterCompletedGoals,
-                goal = prediction.upcomingGoal,
+                currentBalance = currentProjection.currentBalance,
+                goal = predictionProjection.upcomingGoal,
                 dailyTransactions = dailyTransactions,
                 events = dailyEvents,
                 icalEvents = importedEvents.filterByStartLocalDate(currentDate),
-                comparisonBalance = prediction.predictionDiff,
-                totalGoalCost = prediction.totalPriorGoalCost
+                totalGoalCost = predictionProjection.reachedGoalCost
             )
         }
 

@@ -46,8 +46,17 @@ class EventSyncService(
         }
     }
 
+    suspend fun rescheduleAllEventNotifications() {
+        val events = repository.getAllEventsSnapshot()
+        cancelNotifications(events)
+        scheduleNotifications(events)
+    }
+
     private suspend fun upsertEvents(events: List<Event>) {
         events.forEach { instance ->
+            if (instance.id != 0L) {
+                repository.getEventById(instance.id)?.let(notificationManager::cancelEventNotification)
+            }
             val id = repository.upsertEvent(instance)
             notificationManager.scheduleEventNotification(instance.copy(id = id))
         }

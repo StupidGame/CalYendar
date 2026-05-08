@@ -4,8 +4,10 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 
 data class GoalComparisonSnapshot(
-    val comparisonBalance: Long,
-    val nextGoal: FinancialGoal?
+    val currentBalance: Long,
+    val availableBalance: Long,
+    val nextGoal: FinancialGoal?,
+    val nextGoalTargetAmount: Long? = null
 )
 
 object GoalComparisonSnapshotCalculator {
@@ -14,24 +16,29 @@ object GoalComparisonSnapshotCalculator {
         allGoals: List<FinancialGoal>,
         currentDate: LocalDate
     ): GoalComparisonSnapshot {
-        val currentBalance = FinancialCalculator.calculateDailyBalance(transactionsUpToCurrentDate)
-        val prediction =
-            FinancialCalculator.calculatePrediction(
-                currentBalance = currentBalance,
+        val rawCurrentBalance =
+            FinancialCalculator.calculateDailyBalance(transactionsUpToCurrentDate)
+        val projection =
+            FinancialCalculator.calculateGoalProjection(
+                rawBalance = rawCurrentBalance,
                 allGoals = allGoals,
-                currentDate = currentDate
+                currentDate = currentDate,
+                goalWindowStartDate = currentDate
             )
+        val currentBalance = projection.currentBalance
 
-        val comparisonBalance =
-            if (prediction.upcomingGoal != null) {
-                prediction.predictionDiff ?: currentBalance
+        val availableBalance =
+            if (projection.upcomingGoal != null) {
+                projection.predictionDiff ?: currentBalance
             } else {
                 currentBalance
             }
 
         return GoalComparisonSnapshot(
-            comparisonBalance = comparisonBalance,
-            nextGoal = prediction.upcomingGoal
+            currentBalance = currentBalance,
+            availableBalance = availableBalance,
+            nextGoal = projection.upcomingGoal,
+            nextGoalTargetAmount = projection.goalTargetAmount
         )
     }
 }

@@ -10,6 +10,10 @@ import io.github.stupidgame.calyendar.data.Event
 import io.github.stupidgame.calyendar.data.notificationLeadTimes
 
 class EventNotificationManager(private val context: Context) {
+    private companion object {
+        const val NotificationRequestCodeMultiplier = 100
+        const val MaxScheduledNotificationsPerEvent = 16
+    }
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
@@ -30,7 +34,7 @@ class EventNotificationManager(private val context: Context) {
                 putExtra("event_id", event.id.toInt())
             }
             // Use index to keep pending intents unique for multiple alarms on the same event
-            val requestCode = (event.id.toInt() * 100) + index
+            val requestCode = (event.id.toInt() * NotificationRequestCodeMultiplier) + index
             
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
@@ -52,8 +56,6 @@ class EventNotificationManager(private val context: Context) {
     }
 
     fun cancelEventNotification(event: Event) {
-        val notificationList = event.notificationLeadTimes()
-
         // Cancel standard one just in case the old code was used
         val standardIntent = Intent(context, EventNotificationReceiver::class.java)
         val standardPendingIntent = PendingIntent.getBroadcast(
@@ -64,9 +66,9 @@ class EventNotificationManager(private val context: Context) {
         )
         alarmManager.cancel(standardPendingIntent)
 
-        notificationList.forEachIndexed { index, _ ->
+        repeat(MaxScheduledNotificationsPerEvent) { index ->
             val intent = Intent(context, EventNotificationReceiver::class.java)
-            val requestCode = (event.id.toInt() * 100) + index
+            val requestCode = (event.id.toInt() * NotificationRequestCodeMultiplier) + index
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
                 requestCode,

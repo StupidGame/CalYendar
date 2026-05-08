@@ -8,7 +8,7 @@ import org.junit.Test
 class GoalComparisonSnapshotCalculatorTest {
 
     @Test
-    fun `uses current balance when there is no upcoming goal`() {
+    fun `ignores goals before current date when there is no upcoming goal`() {
         val transactions =
             listOf(
                 Transaction(
@@ -39,12 +39,14 @@ class GoalComparisonSnapshotCalculatorTest {
                 currentDate = LocalDate.of(2026, 3, 18)
             )
 
-        assertEquals(100_000, snapshot.comparisonBalance)
+        assertEquals(100_000L, snapshot.currentBalance)
+        assertEquals(100_000L, snapshot.availableBalance)
         assertNull(snapshot.nextGoal)
+        assertNull(snapshot.nextGoalTargetAmount)
     }
 
     @Test
-    fun `subtracts prior goals when an upcoming goal exists`() {
+    fun `ignores past goals and reserves the next goal for widget available balance`() {
         val transactions =
             listOf(
                 Transaction(
@@ -91,8 +93,56 @@ class GoalComparisonSnapshotCalculatorTest {
                 currentDate = LocalDate.of(2026, 3, 18)
             )
 
-        assertEquals(130_000, snapshot.comparisonBalance)
+        assertEquals(180_000L, snapshot.currentBalance)
+        assertEquals(80_000L, snapshot.availableBalance)
         assertEquals("trip", snapshot.nextGoal?.name)
         assertEquals(100_000L, snapshot.nextGoal?.amount)
+        assertEquals(100_000L, snapshot.nextGoalTargetAmount)
+    }
+
+    @Test
+    fun `subtracts goals on the current date from widget balance`() {
+        val transactions =
+            listOf(
+                Transaction(
+                    year = 2026,
+                    month = 2,
+                    day = 18,
+                    type = TransactionType.INCOME,
+                    name = "salary",
+                    amount = 100_000
+                )
+            )
+        val goals =
+            listOf(
+                FinancialGoal(
+                    id = 1,
+                    year = 2026,
+                    month = 2,
+                    day = 18,
+                    name = "today",
+                    amount = 70_000
+                ),
+                FinancialGoal(
+                    id = 2,
+                    year = 2026,
+                    month = 2,
+                    day = 25,
+                    name = "future",
+                    amount = 40_000
+                )
+            )
+
+        val snapshot =
+            GoalComparisonSnapshotCalculator.calculate(
+                transactionsUpToCurrentDate = transactions,
+                allGoals = goals,
+                currentDate = LocalDate.of(2026, 3, 18)
+            )
+
+        assertEquals(30_000L, snapshot.currentBalance)
+        assertEquals(-10_000L, snapshot.availableBalance)
+        assertEquals("future", snapshot.nextGoal?.name)
+        assertEquals(40_000L, snapshot.nextGoalTargetAmount)
     }
 }
