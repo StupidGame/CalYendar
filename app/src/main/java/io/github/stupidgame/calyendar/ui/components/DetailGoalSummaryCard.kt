@@ -38,7 +38,6 @@ fun DetailGoalSummaryCard(
 ) {
     val goalTargetAmount = goal?.amount
     val comparisonBalance = displayBalance
-    val displayAmount = displayBalance
 
     Card(
         modifier =
@@ -46,15 +45,6 @@ fun DetailGoalSummaryCard(
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "現在時点で使えるお金", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "%,d".format(displayAmount),
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (displayAmount >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
             if (goal != null && goalTargetAmount != null) {
                 val percentage =
                     if (goalTargetAmount > 0) {
@@ -65,11 +55,11 @@ fun DetailGoalSummaryCard(
                         0f
                     }
                 val cardColor = getGradientColor(comparisonBalance, goalTargetAmount)
-                val difference = comparisonBalance - goalTargetAmount
+                val remainingAfterGoal = comparisonBalance - goalTargetAmount
                 val diffColor =
                     when {
-                        difference >= 0 -> Color(0xFF2E7D32)
-                        difference >= -goalTargetAmount -> Color(0xFFF9A825)
+                        remainingAfterGoal >= 0 -> Color(0xFF2E7D32)
+                        remainingAfterGoal >= -goalTargetAmount -> Color(0xFFF9A825)
                         else -> Color(0xFFEF5350)
                     }
 
@@ -106,10 +96,10 @@ fun DetailGoalSummaryCard(
                 }
                 Text(
                     text =
-                        if (difference >= 0) {
-                            "目標日には %,d 円余ります".format(difference)
+                        if (remainingAfterGoal >= 0) {
+                            "目標達成後の残り: %,d 円".format(remainingAfterGoal)
                         } else {
-                            "目標日には %,d 円足りません".format(-difference)
+                            "目標達成まであと %,d 円足りません".format(-remainingAfterGoal)
                         },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
