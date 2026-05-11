@@ -6,13 +6,14 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import io.github.stupidgame.calyendar.EventNotificationReceiver
+import io.github.stupidgame.calyendar.NotificationConstants
 import io.github.stupidgame.calyendar.data.Event
 import io.github.stupidgame.calyendar.data.notificationLeadTimes
 
 class EventNotificationManager(private val context: Context) {
     private companion object {
-        const val NotificationRequestCodeMultiplier = 100
-        const val MaxScheduledNotificationsPerEvent = 16
+        const val NOTIFICATION_REQUEST_CODE_MULTIPLIER = 100
+        const val MAX_SCHEDULED_NOTIFICATIONS_PER_EVENT = 16
     }
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -22,7 +23,8 @@ class EventNotificationManager(private val context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
             return
         }
-        val notificationList = event.notificationLeadTimes()
+        val notificationList =
+            event.notificationLeadTimes().take(MAX_SCHEDULED_NOTIFICATIONS_PER_EVENT)
 
         if (notificationList.isEmpty()) return
 
@@ -30,12 +32,12 @@ class EventNotificationManager(private val context: Context) {
             if (minutes < 0) return@forEachIndexed
 
             val intent = Intent(context, EventNotificationReceiver::class.java).apply {
-                putExtra("event_title", event.title)
-                putExtra("event_id", event.id.toInt())
+                putExtra(NotificationConstants.EXTRA_EVENT_TITLE, event.title)
+                putExtra(NotificationConstants.EXTRA_EVENT_ID, event.id.toInt())
             }
             // Use index to keep pending intents unique for multiple alarms on the same event
-            val requestCode = (event.id.toInt() * NotificationRequestCodeMultiplier) + index
-            
+            val requestCode = (event.id.toInt() * NOTIFICATION_REQUEST_CODE_MULTIPLIER) + index
+
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
                 requestCode,
@@ -66,9 +68,9 @@ class EventNotificationManager(private val context: Context) {
         )
         alarmManager.cancel(standardPendingIntent)
 
-        repeat(MaxScheduledNotificationsPerEvent) { index ->
+        repeat(MAX_SCHEDULED_NOTIFICATIONS_PER_EVENT) { index ->
             val intent = Intent(context, EventNotificationReceiver::class.java)
-            val requestCode = (event.id.toInt() * NotificationRequestCodeMultiplier) + index
+            val requestCode = (event.id.toInt() * NOTIFICATION_REQUEST_CODE_MULTIPLIER) + index
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
                 requestCode,

@@ -17,7 +17,23 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-class CalYendarRepository(private val database: CalYendarDatabase) {
+private const val JAPANESE_HOLIDAYS_URL = "https://holidays-jp.github.io/api/v1/date.json"
+private const val WEBCAL_SCHEME = "webcal://"
+private const val HTTPS_SCHEME = "https://"
+
+internal fun normalizeCalendarUrl(url: String): String {
+    val trimmedUrl = url.trim()
+    return if (trimmedUrl.startsWith(WEBCAL_SCHEME, ignoreCase = true)) {
+        HTTPS_SCHEME + trimmedUrl.drop(WEBCAL_SCHEME.length)
+    } else {
+        trimmedUrl
+    }
+}
+
+class CalYendarRepository(
+    private val database: CalYendarDatabase,
+    private val httpClient: OkHttpClient = OkHttpClient()
+) {
     private val dao = database.calyendarDao()
 
     fun getTransactionsForDate(year: Int, month: Int, day: Int): Flow<List<Transaction>> =
@@ -105,10 +121,9 @@ class CalYendarRepository(private val database: CalYendarDatabase) {
     suspend fun fetchJapaneseHolidays() {
         withContext(Dispatchers.IO) {
             try {
-                val client = OkHttpClient()
-                val request = Request.Builder().url("https://holidays-jp.github.io/api/v1/date.json").build()
+                val request = Request.Builder().url(JAPANESE_HOLIDAYS_URL).build()
 
-                client.newCall(request).execute().use { response ->
+                httpClient.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext
 
                     val json = JSONObject(response.body?.string() ?: return@withContext)
@@ -156,10 +171,9 @@ class CalYendarRepository(private val database: CalYendarDatabase) {
     suspend fun importWebcal(url: String): Result<String> {
         return withContext(Dispatchers.IO) {
             runCatching {
-                val client = OkHttpClient()
-                val request = Request.Builder().url(url.replace("webcal", "https")).build()
+                val request = Request.Builder().url(normalizeCalendarUrl(url)).build()
 
-                client.newCall(request).execute().use { response ->
+                httpClient.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
                         throw IOException("サーバーから予期しない応答が返されました。(${response.code})")
                     }

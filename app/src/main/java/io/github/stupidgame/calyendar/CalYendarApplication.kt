@@ -47,9 +47,10 @@ class CalYendarApplication : Application() {
             val name = getString(R.string.notification_channel_name)
             val descriptionText = getString(R.string.notification_channel_description)
             val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val channel = NotificationChannel("EVENT_REMINDERS", name, importance).apply {
-                description = descriptionText
-            }
+            val channel =
+                NotificationChannel(NotificationConstants.CHANNEL_ID, name, importance).apply {
+                    description = descriptionText
+                }
             val notificationManager: NotificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)

@@ -14,3 +14,9 @@
 .cxx
 local.properties
 
+# Local signing material
+CalYendar_Key_for_Github_Actions.txt
+*.jks
+*.keystore
+keystore.properties
+
