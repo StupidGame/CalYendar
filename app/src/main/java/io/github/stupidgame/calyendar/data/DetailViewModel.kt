@@ -52,10 +52,16 @@ class DetailViewModel(
                     currentDate = predictionDate,
                     goalWindowStartDate = today
                 )
+            val editableGoal =
+                selectEditableDetailGoal(
+                    allGoals = allGoals,
+                    selectedDate = currentDate,
+                    fallbackGoal = predictionProjection.upcomingGoal
+                )
 
             DetailUiState(
                 currentBalance = currentProjection.currentBalance,
-                goal = predictionProjection.upcomingGoal,
+                goal = editableGoal,
                 dailyTransactions = dailyTransactions,
                 events = dailyEvents,
                 icalEvents = importedEvents.filterByStartLocalDate(currentDate),
@@ -121,6 +127,17 @@ class DetailViewModel(
             repository.clearImportedEvents()
         }
     }
+}
+
+internal fun selectEditableDetailGoal(
+    allGoals: List<FinancialGoal>,
+    selectedDate: LocalDate,
+    fallbackGoal: FinancialGoal?
+): FinancialGoal? {
+    return allGoals
+        .sortedWith(compareBy({ it.year }, { it.month }, { it.day }, { it.id }))
+        .firstOrNull { it.toLocalDate() == selectedDate }
+        ?: fallbackGoal
 }
 
 class DetailViewModelFactory(
