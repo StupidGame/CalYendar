@@ -45,17 +45,17 @@ class CalendarMonthUiStateFactoryTest {
 
         val state = CalendarMonthUiStateFactory.create(input)
 
-        assertEquals(130L, state.todayBalance)
-        assertEquals(70L, state.todayAvailableBalance)
-        assertEquals(120L, state.currentBalance)
-        assertEquals(120L, state.goalComparisonBalance)
-        assertEquals(150L, state.dayStates.getValue(1).balance)
-        assertEquals(130L, state.dayStates.getValue(2).balance)
-        assertEquals(120L, state.dayStates.getValue(3).balance)
+        assertEquals(100L, state.todayBalance)
+        assertEquals(40L, state.todayAvailableBalance)
+        assertEquals(90L, state.currentBalance)
+        assertEquals(90L, state.goalComparisonBalance)
+        assertEquals(120L, state.dayStates.getValue(1).balance)
+        assertEquals(100L, state.dayStates.getValue(2).balance)
+        assertEquals(90L, state.dayStates.getValue(3).balance)
         assertTrue(state.dayStates.getValue(1).isHoliday)
         assertTrue(state.dayStates.getValue(2).isHoliday)
         assertEquals("goal-4", state.dayStates.getValue(2).goal?.name)
-        assertEquals(70L, state.dayStates.getValue(2).predictionDiff)
+        assertEquals(40L, state.dayStates.getValue(2).predictionDiff)
         assertNull(state.dayStates.getValue(1).predictionDiff)
         assertEquals(1, state.activeMonthGoals.size)
     }
@@ -83,15 +83,15 @@ class CalendarMonthUiStateFactoryTest {
 
         val state = CalendarMonthUiStateFactory.create(input)
 
-        assertEquals(100L, state.todayBalance)
-        assertEquals(60L, state.todayAvailableBalance)
-        assertEquals(100L, state.currentBalance)
-        assertEquals(60L, state.availableMoneyAfterMonthGoals)
+        assertEquals(70L, state.todayBalance)
+        assertEquals(30L, state.todayAvailableBalance)
+        assertEquals(70L, state.currentBalance)
+        assertEquals(30L, state.availableMoneyAfterMonthGoals)
         assertTrue(state.activeMonthGoals.isEmpty())
     }
 
     @Test
-    fun `ignores goals before today before comparing active month goals`() {
+    fun `subtracts paid goals before comparing active month goals`() {
         val input =
             CalendarMonthUiStateInput(
                 year = 2026,
@@ -118,10 +118,10 @@ class CalendarMonthUiStateFactoryTest {
 
         val state = CalendarMonthUiStateFactory.create(input)
 
-        assertEquals(150L, state.todayBalance)
-        assertEquals(90L, state.todayAvailableBalance)
-        assertEquals(150L, state.currentBalance)
-        assertEquals(150L, state.goalComparisonBalance)
+        assertEquals(100L, state.todayBalance)
+        assertEquals(40L, state.todayAvailableBalance)
+        assertEquals(100L, state.currentBalance)
+        assertEquals(100L, state.goalComparisonBalance)
         assertEquals(1, state.activeMonthGoals.size)
     }
 
@@ -149,14 +149,14 @@ class CalendarMonthUiStateFactoryTest {
 
         val state = CalendarMonthUiStateFactory.create(input)
 
-        assertEquals(200L, state.currentBalance)
-        assertEquals(120L, state.todayAvailableBalance)
-        assertEquals(120L, state.availableMoneyAfterMonthGoals)
+        assertEquals(120L, state.currentBalance)
+        assertEquals(40L, state.todayAvailableBalance)
+        assertEquals(40L, state.availableMoneyAfterMonthGoals)
         assertTrue(state.activeMonthGoals.isEmpty())
     }
 
     @Test
-    fun `cell display ignores goals before today and uses the next goal amount`() {
+    fun `cell display subtracts paid goals and uses the next goal amount`() {
         val input =
             CalendarMonthUiStateInput(
                 year = 2026,
@@ -180,8 +180,8 @@ class CalendarMonthUiStateFactoryTest {
         val state = CalendarMonthUiStateFactory.create(input)
         val todayCell = state.dayStates.getValue(28)
 
-        assertEquals(200L, todayCell.balance)
-        assertEquals(120L, todayCell.predictionDiff)
+        assertEquals(120L, todayCell.balance)
+        assertEquals(40L, todayCell.predictionDiff)
         assertEquals("goal-5", todayCell.goal?.name)
         assertEquals(80L, todayCell.goal?.amount)
         assertEquals(80L, todayCell.goalTargetAmount)
@@ -225,7 +225,7 @@ class CalendarMonthUiStateFactoryTest {
     }
 
     @Test
-    fun `cell display ignores goals before today across month boundaries`() {
+    fun `cell display subtracts paid goals across month boundaries`() {
         val input =
             CalendarMonthUiStateInput(
                 year = 2026,
@@ -249,7 +249,7 @@ class CalendarMonthUiStateFactoryTest {
         val dayCell = state.dayStates.getValue(5)
 
         assertEquals("goal-10", dayCell.goal?.name)
-        assertEquals(50L, dayCell.predictionDiff)
+        assertEquals(-70L, dayCell.predictionDiff)
         assertEquals(200L, dayCell.goalTargetAmount)
     }
 

@@ -8,7 +8,7 @@ import org.junit.Test
 class GoalComparisonSnapshotCalculatorTest {
 
     @Test
-    fun `ignores goals before current date when there is no upcoming goal`() {
+    fun `subtracts past goals when there is no upcoming goal`() {
         val transactions =
             listOf(
                 Transaction(
@@ -39,14 +39,14 @@ class GoalComparisonSnapshotCalculatorTest {
                 currentDate = LocalDate.of(2026, 3, 18)
             )
 
-        assertEquals(100_000L, snapshot.currentBalance)
-        assertEquals(100_000L, snapshot.availableBalance)
+        assertEquals(70_000L, snapshot.currentBalance)
+        assertEquals(70_000L, snapshot.availableBalance)
         assertNull(snapshot.nextGoal)
         assertNull(snapshot.nextGoalTargetAmount)
     }
 
     @Test
-    fun `ignores past goals and reserves the next goal for widget available balance`() {
+    fun `subtracts past goals and reserves the next goal for widget available balance`() {
         val transactions =
             listOf(
                 Transaction(
@@ -93,8 +93,8 @@ class GoalComparisonSnapshotCalculatorTest {
                 currentDate = LocalDate.of(2026, 3, 18)
             )
 
-        assertEquals(180_000L, snapshot.currentBalance)
-        assertEquals(80_000L, snapshot.availableBalance)
+        assertEquals(130_000L, snapshot.currentBalance)
+        assertEquals(30_000L, snapshot.availableBalance)
         assertEquals("trip", snapshot.nextGoal?.name)
         assertEquals(100_000L, snapshot.nextGoal?.amount)
         assertEquals(100_000L, snapshot.nextGoalTargetAmount)
