@@ -7,7 +7,7 @@ import org.junit.Test
 class FinancialCalculatorTest {
 
     @Test
-    fun `goal projection subtracts passed goals before the window start date`() {
+    fun `goal projection keeps a goal on the current date unpaid and visible`() {
         val result =
             FinancialCalculator.calculateGoalProjection(
                 rawBalance = 200_000L,
@@ -21,11 +21,11 @@ class FinancialCalculatorTest {
                 goalWindowStartDate = LocalDate.of(2026, 3, 18)
             )
 
-        assertEquals(130_000L, result.currentBalance)
-        assertEquals(70_000L, result.reachedGoalCost)
-        assertEquals("goal-25", result.upcomingGoal?.name)
-        assertEquals(50_000L, result.goalTargetAmount)
-        assertEquals(80_000L, result.predictionDiff)
+        assertEquals(170_000L, result.currentBalance)
+        assertEquals(30_000L, result.reachedGoalCost)
+        assertEquals("goal-18", result.upcomingGoal?.name)
+        assertEquals(40_000L, result.goalTargetAmount)
+        assertEquals(130_000L, result.predictionDiff)
     }
 
     @Test
@@ -72,7 +72,7 @@ class FinancialCalculatorTest {
     }
 
     @Test
-    fun `goal projection subtracts a goal on its date and moves to the next goal`() {
+    fun `goal projection keeps a goal unpaid on its date`() {
         val result =
             FinancialCalculator.calculateGoalProjection(
                 rawBalance = 5_000L,
@@ -82,6 +82,27 @@ class FinancialCalculatorTest {
                         goal(LocalDate.of(2026, 4, 5), amount = 3_000L)
                     ),
                 currentDate = LocalDate.of(2026, 3, 15),
+                goalWindowStartDate = LocalDate.of(2026, 3, 1)
+            )
+
+        assertEquals(5_000L, result.currentBalance)
+        assertEquals(0L, result.reachedGoalCost)
+        assertEquals("goal-15", result.upcomingGoal?.name)
+        assertEquals(1_000L, result.goalTargetAmount)
+        assertEquals(4_000L, result.predictionDiff)
+    }
+
+    @Test
+    fun `goal projection subtracts a goal after its date and moves to the next goal`() {
+        val result =
+            FinancialCalculator.calculateGoalProjection(
+                rawBalance = 5_000L,
+                allGoals =
+                    listOf(
+                        goal(LocalDate.of(2026, 3, 15), amount = 1_000L),
+                        goal(LocalDate.of(2026, 4, 5), amount = 3_000L)
+                    ),
+                currentDate = LocalDate.of(2026, 3, 16),
                 goalWindowStartDate = LocalDate.of(2026, 3, 1)
             )
 
@@ -102,7 +123,7 @@ class FinancialCalculatorTest {
                         goal(LocalDate.of(2026, 3, 18), amount = 40_000L),
                         goal(LocalDate.of(2026, 3, 25), amount = 50_000L)
                     ),
-                currentDate = LocalDate.of(2026, 3, 18),
+                currentDate = LocalDate.of(2026, 3, 19),
                 goalWindowStartDate = LocalDate.of(2026, 3, 18)
             )
 

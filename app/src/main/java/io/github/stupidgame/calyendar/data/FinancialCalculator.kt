@@ -23,11 +23,11 @@ object FinancialCalculator {
             allSortedGoals.filter { goal -> !goal.toLocalDate().isBefore(goalWindowStartDate) }
         val reachedGoalCost =
             allSortedGoals
-                .filter { goal -> !goal.toLocalDate().isAfter(currentDate) }
+                .filter { goal -> goal.toLocalDate().isBefore(currentDate) }
                 .sumOf(FinancialGoal::amount)
         val currentBalance = (rawBalance - reachedGoalCost).coerceAtLeast(0L)
         val upcomingGoal =
-            visibleGoals.firstOrNull { goal -> goal.toLocalDate().isAfter(currentDate) }
+            visibleGoals.firstOrNull { goal -> !goal.toLocalDate().isBefore(currentDate) }
         val goalTargetAmount = upcomingGoal?.amount
         val predictionDiff = goalTargetAmount?.let { currentBalance - it }
 

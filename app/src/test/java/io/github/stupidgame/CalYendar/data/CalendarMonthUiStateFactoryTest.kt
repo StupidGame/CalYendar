@@ -126,6 +126,39 @@ class CalendarMonthUiStateFactoryTest {
     }
 
     @Test
+    fun `keeps a goal on today active for month and day calculations`() {
+        val input =
+            CalendarMonthUiStateInput(
+                year = 2026,
+                month = 2,
+                today = LocalDate.of(2026, 3, 15),
+                transactionsUpToToday =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 5_000)),
+                transactionsBeforeMonth = emptyList(),
+                monthTransactions =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 5_000)),
+                monthEvents = emptyList(),
+                allGoals =
+                    listOf(
+                        goal(LocalDate.of(2026, 3, 15), amount = 1_000),
+                        goal(LocalDate.of(2026, 4, 5), amount = 3_000)
+                    ),
+                importedEvents = emptyList()
+            )
+
+        val state = CalendarMonthUiStateFactory.create(input)
+        val todayCell = state.dayStates.getValue(15)
+
+        assertEquals(5_000L, state.todayBalance)
+        assertEquals(4_000L, state.todayAvailableBalance)
+        assertEquals(5_000L, state.currentBalance)
+        assertEquals(1, state.activeMonthGoals.size)
+        assertEquals("goal-15", todayCell.goal?.name)
+        assertEquals(5_000L, todayCell.balance)
+        assertEquals(4_000L, todayCell.predictionDiff)
+    }
+
+    @Test
     fun `uses the goal immediately after completed month goals for spendable balance`() {
         val input =
             CalendarMonthUiStateInput(
@@ -216,12 +249,41 @@ class CalendarMonthUiStateFactoryTest {
         assertEquals("goal-15", beforeFirstGoalCell.goal?.name)
         assertEquals(1_000L, beforeFirstGoalCell.goalTargetAmount)
         assertEquals(4_000L, beforeFirstGoalCell.predictionDiff)
-        assertEquals(4_000L, firstGoalDateCell.balance)
-        assertEquals("goal-5", firstGoalDateCell.goal?.name)
-        assertEquals(1_000L, firstGoalDateCell.predictionDiff)
+        assertEquals(5_000L, firstGoalDateCell.balance)
+        assertEquals("goal-15", firstGoalDateCell.goal?.name)
+        assertEquals(1_000L, firstGoalDateCell.goalTargetAmount)
+        assertEquals(4_000L, firstGoalDateCell.predictionDiff)
         assertEquals("goal-5", afterFirstGoalCell.goal?.name)
         assertEquals(3_000L, afterFirstGoalCell.goalTargetAmount)
         assertEquals(1_000L, afterFirstGoalCell.predictionDiff)
+    }
+
+    @Test
+    fun `subtracts a completed goal on the last day of a past month`() {
+        val input =
+            CalendarMonthUiStateInput(
+                year = 2026,
+                month = 2,
+                today = LocalDate.of(2026, 4, 5),
+                transactionsUpToToday =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 500)),
+                transactionsBeforeMonth = emptyList(),
+                monthTransactions =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 500)),
+                monthEvents = emptyList(),
+                allGoals =
+                    listOf(
+                        goal(LocalDate.of(2026, 3, 31), amount = 200),
+                        goal(LocalDate.of(2026, 4, 10), amount = 100)
+                    ),
+                importedEvents = emptyList()
+            )
+
+        val state = CalendarMonthUiStateFactory.create(input)
+
+        assertEquals(300L, state.currentBalance)
+        assertEquals(200L, state.availableMoneyAfterMonthGoals)
+        assertTrue(state.activeMonthGoals.isEmpty())
     }
 
     @Test
