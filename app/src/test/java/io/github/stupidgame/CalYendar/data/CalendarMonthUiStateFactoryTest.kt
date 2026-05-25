@@ -126,7 +126,39 @@ class CalendarMonthUiStateFactoryTest {
     }
 
     @Test
-    fun `keeps a goal on today active for month and day calculations`() {
+    fun `keeps balances at zero when paid goals exceed income`() {
+        val input =
+            CalendarMonthUiStateInput(
+                year = 2026,
+                month = 2,
+                today = LocalDate.of(2026, 3, 18),
+                transactionsUpToToday =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 50)),
+                transactionsBeforeMonth = emptyList(),
+                monthTransactions =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 50)),
+                monthEvents = emptyList(),
+                allGoals =
+                    listOf(
+                        goal(LocalDate.of(2026, 3, 10), amount = 80),
+                        goal(LocalDate.of(2026, 3, 25), amount = 60)
+                    ),
+                importedEvents = emptyList()
+            )
+
+        val state = CalendarMonthUiStateFactory.create(input)
+        val todayCell = state.dayStates.getValue(18)
+
+        assertEquals(0L, state.todayBalance)
+        assertEquals(-60L, state.todayAvailableBalance)
+        assertEquals(0L, state.currentBalance)
+        assertEquals(0L, state.goalComparisonBalance)
+        assertEquals(0L, todayCell.balance)
+        assertEquals(-60L, todayCell.predictionDiff)
+    }
+
+    @Test
+    fun `treats a goal on today as completed for month and day calculations`() {
         val input =
             CalendarMonthUiStateInput(
                 year = 2026,
@@ -149,13 +181,43 @@ class CalendarMonthUiStateFactoryTest {
         val state = CalendarMonthUiStateFactory.create(input)
         val todayCell = state.dayStates.getValue(15)
 
-        assertEquals(5_000L, state.todayBalance)
-        assertEquals(4_000L, state.todayAvailableBalance)
-        assertEquals(5_000L, state.currentBalance)
-        assertEquals(1, state.activeMonthGoals.size)
-        assertEquals("goal-15", todayCell.goal?.name)
-        assertEquals(5_000L, todayCell.balance)
-        assertEquals(4_000L, todayCell.predictionDiff)
+        assertEquals(4_000L, state.todayBalance)
+        assertEquals(1_000L, state.todayAvailableBalance)
+        assertEquals(4_000L, state.currentBalance)
+        assertTrue(state.activeMonthGoals.isEmpty())
+        assertEquals("goal-5", todayCell.goal?.name)
+        assertEquals(4_000L, todayCell.balance)
+        assertEquals(1_000L, todayCell.predictionDiff)
+    }
+
+    @Test
+    fun `day cell sums goals on the same upcoming date`() {
+        val input =
+            CalendarMonthUiStateInput(
+                year = 2026,
+                month = 2,
+                today = LocalDate.of(2026, 3, 18),
+                transactionsUpToToday =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 100)),
+                transactionsBeforeMonth = emptyList(),
+                monthTransactions =
+                    listOf(transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 100)),
+                monthEvents = emptyList(),
+                allGoals =
+                    listOf(
+                        goal(LocalDate.of(2026, 3, 25), amount = 30),
+                        goal(LocalDate.of(2026, 3, 25), amount = 20)
+                    ),
+                importedEvents = emptyList()
+            )
+
+        val state = CalendarMonthUiStateFactory.create(input)
+        val todayCell = state.dayStates.getValue(18)
+
+        assertEquals("goal-25", todayCell.goal?.name)
+        assertEquals(50L, todayCell.goalTargetAmount)
+        assertEquals(50L, todayCell.predictionDiff)
+        assertEquals(50L, state.todayAvailableBalance)
     }
 
     @Test
@@ -249,10 +311,10 @@ class CalendarMonthUiStateFactoryTest {
         assertEquals("goal-15", beforeFirstGoalCell.goal?.name)
         assertEquals(1_000L, beforeFirstGoalCell.goalTargetAmount)
         assertEquals(4_000L, beforeFirstGoalCell.predictionDiff)
-        assertEquals(5_000L, firstGoalDateCell.balance)
-        assertEquals("goal-15", firstGoalDateCell.goal?.name)
-        assertEquals(1_000L, firstGoalDateCell.goalTargetAmount)
-        assertEquals(4_000L, firstGoalDateCell.predictionDiff)
+        assertEquals(4_000L, firstGoalDateCell.balance)
+        assertEquals("goal-5", firstGoalDateCell.goal?.name)
+        assertEquals(3_000L, firstGoalDateCell.goalTargetAmount)
+        assertEquals(1_000L, firstGoalDateCell.predictionDiff)
         assertEquals("goal-5", afterFirstGoalCell.goal?.name)
         assertEquals(3_000L, afterFirstGoalCell.goalTargetAmount)
         assertEquals(1_000L, afterFirstGoalCell.predictionDiff)

@@ -2,6 +2,7 @@ package io.github.stupidgame.calyendar.data
 
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class DetailViewModelTest {
@@ -49,6 +50,28 @@ class DetailViewModelTest {
             )
 
         assertEquals(fallbackGoal, result)
+    }
+
+    @Test
+    fun `detail goal target amount sums goals on the same date`() {
+        val selectedGoal = goal(id = 1, date = LocalDate.of(2026, 5, 14), amount = 10_000)
+        val sameDayGoal = goal(id = 2, date = LocalDate.of(2026, 5, 14), amount = 20_000)
+        val anotherDayGoal = goal(id = 3, date = LocalDate.of(2026, 5, 20), amount = 30_000)
+
+        val result =
+            calculateDetailGoalTargetAmount(
+                allGoals = listOf(selectedGoal, sameDayGoal, anotherDayGoal),
+                goal = selectedGoal
+            )
+
+        assertEquals(30_000L, result)
+    }
+
+    @Test
+    fun `detail goal target amount is null when there is no goal`() {
+        val result = calculateDetailGoalTargetAmount(allGoals = emptyList(), goal = null)
+
+        assertNull(result)
     }
 
     private fun goal(

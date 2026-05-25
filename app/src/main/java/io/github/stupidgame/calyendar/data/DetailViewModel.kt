@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 data class DetailUiState(
     val currentBalance: Long = 0L,
     val goal: FinancialGoal? = null,
+    val goalTargetAmount: Long? = null,
     val dailyTransactions: List<Transaction> = emptyList(),
     val events: List<Event> = emptyList(),
     val icalEvents: List<ImportedEvent> = emptyList(),
@@ -62,6 +63,7 @@ class DetailViewModel(
             DetailUiState(
                 currentBalance = currentProjection.currentBalance,
                 goal = editableGoal,
+                goalTargetAmount = calculateDetailGoalTargetAmount(allGoals, editableGoal),
                 dailyTransactions = dailyTransactions,
                 events = dailyEvents,
                 icalEvents = importedEvents.filterByStartLocalDate(currentDate),
@@ -138,6 +140,17 @@ internal fun selectEditableDetailGoal(
         .sortedWith(compareBy({ it.year }, { it.month }, { it.day }, { it.id }))
         .firstOrNull { it.toLocalDate() == selectedDate }
         ?: fallbackGoal
+}
+
+internal fun calculateDetailGoalTargetAmount(
+    allGoals: List<FinancialGoal>,
+    goal: FinancialGoal?
+): Long? {
+    if (goal == null) return null
+    val goalDate = goal.toLocalDate()
+    return allGoals
+        .filter { it.toLocalDate() == goalDate }
+        .sumOf(FinancialGoal::amount)
 }
 
 class DetailViewModelFactory(

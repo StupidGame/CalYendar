@@ -101,7 +101,7 @@ class GoalComparisonSnapshotCalculatorTest {
     }
 
     @Test
-    fun `reserves a goal on the current date without subtracting it from widget balance`() {
+    fun `subtracts a goal on the current date from widget balance`() {
         val transactions =
             listOf(
                 Transaction(
@@ -140,9 +140,101 @@ class GoalComparisonSnapshotCalculatorTest {
                 currentDate = LocalDate.of(2026, 3, 18)
             )
 
+        assertEquals(30_000L, snapshot.currentBalance)
+        assertEquals(-10_000L, snapshot.availableBalance)
+        assertEquals("future", snapshot.nextGoal?.name)
+        assertEquals(40_000L, snapshot.nextGoalTargetAmount)
+    }
+
+    @Test
+    fun `keeps widget balance at zero when paid goals exceed transactions`() {
+        val transactions =
+            listOf(
+                Transaction(
+                    year = 2026,
+                    month = 2,
+                    day = 1,
+                    type = TransactionType.INCOME,
+                    name = "salary",
+                    amount = 50_000
+                )
+            )
+        val goals =
+            listOf(
+                FinancialGoal(
+                    id = 1,
+                    year = 2026,
+                    month = 2,
+                    day = 10,
+                    name = "paid",
+                    amount = 80_000
+                ),
+                FinancialGoal(
+                    id = 2,
+                    year = 2026,
+                    month = 2,
+                    day = 25,
+                    name = "future",
+                    amount = 20_000
+                )
+            )
+
+        val snapshot =
+            GoalComparisonSnapshotCalculator.calculate(
+                transactionsUpToCurrentDate = transactions,
+                allGoals = goals,
+                currentDate = LocalDate.of(2026, 3, 18)
+            )
+
+        assertEquals(0L, snapshot.currentBalance)
+        assertEquals(-20_000L, snapshot.availableBalance)
+        assertEquals("future", snapshot.nextGoal?.name)
+        assertEquals(20_000L, snapshot.nextGoalTargetAmount)
+    }
+
+    @Test
+    fun `sums goals on the same next goal date for widget available balance`() {
+        val transactions =
+            listOf(
+                Transaction(
+                    year = 2026,
+                    month = 2,
+                    day = 18,
+                    type = TransactionType.INCOME,
+                    name = "salary",
+                    amount = 100_000
+                )
+            )
+        val goals =
+            listOf(
+                FinancialGoal(
+                    id = 1,
+                    year = 2026,
+                    month = 2,
+                    day = 25,
+                    name = "trip",
+                    amount = 60_000
+                ),
+                FinancialGoal(
+                    id = 2,
+                    year = 2026,
+                    month = 2,
+                    day = 25,
+                    name = "ticket",
+                    amount = 30_000
+                )
+            )
+
+        val snapshot =
+            GoalComparisonSnapshotCalculator.calculate(
+                transactionsUpToCurrentDate = transactions,
+                allGoals = goals,
+                currentDate = LocalDate.of(2026, 3, 18)
+            )
+
         assertEquals(100_000L, snapshot.currentBalance)
-        assertEquals(30_000L, snapshot.availableBalance)
-        assertEquals("today", snapshot.nextGoal?.name)
-        assertEquals(70_000L, snapshot.nextGoalTargetAmount)
+        assertEquals(10_000L, snapshot.availableBalance)
+        assertEquals("trip", snapshot.nextGoal?.name)
+        assertEquals(90_000L, snapshot.nextGoalTargetAmount)
     }
 }

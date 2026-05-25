@@ -292,6 +292,7 @@ private fun DetailHeader(
     DetailGoalSummaryCard(
         displayBalance = uiState.currentBalance,
         goal = uiState.goal,
+        goalTargetAmount = uiState.goalTargetAmount,
         totalGoalCost = uiState.totalGoalCost,
         onLongClick = { uiState.goal?.let(onDeleteGoal) },
         onClick = { uiState.goal?.let(onEditGoal) }

@@ -32,11 +32,11 @@ import io.github.stupidgame.calyendar.data.FinancialGoal
 fun DetailGoalSummaryCard(
     displayBalance: Long,
     goal: FinancialGoal?,
+    goalTargetAmount: Long? = goal?.amount,
     totalGoalCost: Long,
     onLongClick: () -> Unit,
     onClick: () -> Unit
 ) {
-    val goalTargetAmount = goal?.amount
     val comparisonBalance = displayBalance
 
     Card(
