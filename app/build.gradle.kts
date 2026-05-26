@@ -24,14 +24,14 @@ android {
         create("release") {
             val ksPath = System.getenv("CALYENDAR_KEY_PATH")
             val ksPass = System.getenv("KEYSTORE_PASSWORD")
-            val keyAl  = "calyendar"
-            val keyPass= System.getenv("KEY_PASSWORD")
+            val keyAliasName = "calyendar"
+            val keyPass = System.getenv("KEY_PASSWORD")
 
             // 環境変数が揃っている時だけ設定（ローカル開発で未設定でもビルドできるように）
-            if (!ksPath.isNullOrBlank() && !ksPass.isNullOrBlank() && !keyAl.isNullOrBlank() && !keyPass.isNullOrBlank()) {
+            if (!ksPath.isNullOrBlank() && !ksPass.isNullOrBlank() && !keyPass.isNullOrBlank()) {
                 storeFile = file(ksPath)
                 storePassword = ksPass
-                keyAlias = keyAl
+                keyAlias = keyAliasName
                 keyPassword = keyPass
             } else {
                 // 未設定なら release 署名は設定されません（CI等で環境変数を入れてください）

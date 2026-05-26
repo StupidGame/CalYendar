@@ -109,9 +109,7 @@ object CalendarMonthUiStateFactory {
             monthGoals
                 .maxOfOrNull { goal -> goal.toLocalDate() }
                 ?.let { lastMonthGoalDate ->
-                    input.allGoals
-                        .sortedWith(compareBy({ it.year }, { it.month }, { it.day }, { it.id }))
-                        .firstOrNull { goal -> goal.toLocalDate().isAfter(lastMonthGoalDate) }
+                    input.allGoals.firstAfterDate(lastMonthGoalDate)
                 }
         val balanceAfterMonthGoals =
             FinancialCalculator.calculateGoalProjection(

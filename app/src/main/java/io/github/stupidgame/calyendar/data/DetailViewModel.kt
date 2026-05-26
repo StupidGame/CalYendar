@@ -136,10 +136,7 @@ internal fun selectEditableDetailGoal(
     selectedDate: LocalDate,
     fallbackGoal: FinancialGoal?
 ): FinancialGoal? {
-    return allGoals
-        .sortedWith(compareBy({ it.year }, { it.month }, { it.day }, { it.id }))
-        .firstOrNull { it.toLocalDate() == selectedDate }
-        ?: fallbackGoal
+    return allGoals.firstOnDate(selectedDate) ?: fallbackGoal
 }
 
 internal fun calculateDetailGoalTargetAmount(
@@ -147,10 +144,7 @@ internal fun calculateDetailGoalTargetAmount(
     goal: FinancialGoal?
 ): Long? {
     if (goal == null) return null
-    val goalDate = goal.toLocalDate()
-    return allGoals
-        .filter { it.toLocalDate() == goalDate }
-        .sumOf(FinancialGoal::amount)
+    return allGoals.totalAmountOnDate(goal.toLocalDate())
 }
 
 class DetailViewModelFactory(

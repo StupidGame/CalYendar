@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -42,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.stupidgame.calyendar.data.Event
@@ -57,8 +57,19 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
+private val standardNotificationOptions =
+    listOf(
+        30L to "30分前",
+        60L to "1時間前",
+        1440L to "1日前"
+    )
+
+private val customNotificationUnits = listOf("分", "時間", "日")
+private val daysOfWeek = listOf("月", "火", "水", "木", "金", "土", "日")
+private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
 fun formatNotificationLabel(minutes: Long): String {
-    return when(minutes) {
+    return when (minutes) {
         -1L -> "なし"
         30L -> "30分前"
         60L -> "1時間前"
@@ -75,6 +86,24 @@ private fun ZoneId.toJapaneseLabel(): String {
     val displayName = getDisplayName(TextStyle.FULL, Locale.JAPAN)
     val offset = rules.getOffset(Instant.now()).id.replace("Z", "+00:00")
     return "$displayName（時差 $offset）"
+}
+
+private fun customNotificationMinutes(valueText: String, unit: String): Long {
+    val value = valueText.toLongOrNull() ?: return 0L
+    return when (unit) {
+        "分" -> value
+        "時間" -> value * 60
+        "日" -> value * 60 * 24
+        else -> 0L
+    }
+}
+
+private fun List<Long>.withNotificationLeadTime(minutes: Long): List<Long> {
+    return if (minutes > 0 && minutes !in this) {
+        (this + minutes).normalizedNotificationLeadTimes()
+    } else {
+        this
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -127,19 +156,10 @@ fun AddEventDialog(
         )
     }
 
-    val notificationOptions = remember {
-        listOf(
-            30L to "30分前",
-            60L to "1時間前",
-            1440L to "1日前"
-        )
-    }
-    
     var notificationDropDownExpanded by remember { mutableStateOf(false) }
     var selectedStandardNotification by remember { mutableStateOf<Long?>(null) }
     var customNotificationValue by remember { mutableStateOf("1") }
     var customNotificationUnit by remember { mutableStateOf("分") }
-    val customNotificationUnits = remember { listOf("分", "時間", "日") }
     var customUnitDropDownExpanded by remember { mutableStateOf(false) }
 
     var isHoliday by remember { mutableStateOf(event?.isHoliday ?: false) }
@@ -152,7 +172,6 @@ fun AddEventDialog(
     var repeatUntil by remember { mutableStateOf(startDate.plusYears(1)) }
     var showRepeatUntilPicker by remember { mutableStateOf(false) }
 
-    val daysOfWeek = listOf("月", "火", "水", "木", "金", "土", "日")
     var selectedDays by remember { mutableStateOf(setOf<Int>()) }
 
     val scrollState = rememberScrollState()
@@ -186,7 +205,7 @@ fun AddEventDialog(
                             onClick = { showTimePicker = true; editingStartDate = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(startTime.format(DateTimeFormatter.ofPattern("HH:mm")))
+                            Text(startTime.format(timeFormatter))
                         }
                     }
                 }
@@ -208,7 +227,7 @@ fun AddEventDialog(
                             onClick = { showTimePicker = true; editingStartDate = false },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(endTime.format(DateTimeFormatter.ofPattern("HH:mm")))
+                            Text(endTime.format(timeFormatter))
                         }
                     }
                 }
@@ -276,7 +295,7 @@ fun AddEventDialog(
                             expanded = notificationDropDownExpanded,
                             onDismissRequest = { notificationDropDownExpanded = false }
                         ) {
-                            notificationOptions.forEach { (minutes, label) ->
+                            standardNotificationOptions.forEach { (minutes, label) ->
                                 DropdownMenuItem(
                                     text = { Text(label) },
                                     onClick = {
@@ -296,21 +315,13 @@ fun AddEventDialog(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = {
-                        val minutesToAdd = if (selectedStandardNotification != null) {
-                            selectedStandardNotification!!
-                        } else {
-                            val value = customNotificationValue.toLongOrNull() ?: 0
-                            when (customNotificationUnit) {
-                                "分" -> value
-                                "時間" -> value * 60
-                                "日" -> value * 60 * 24
-                                else -> 0L
-                            }
-                        }
-                        if (minutesToAdd > 0 && !notifications.contains(minutesToAdd)) {
-                            notifications =
-                                (notifications + minutesToAdd).normalizedNotificationLeadTimes()
-                        }
+                        val minutesToAdd =
+                            selectedStandardNotification
+                                ?: customNotificationMinutes(
+                                    valueText = customNotificationValue,
+                                    unit = customNotificationUnit
+                                )
+                        notifications = notifications.withNotificationLeadTime(minutesToAdd)
                     }) {
                         Text("追加")
                     }
