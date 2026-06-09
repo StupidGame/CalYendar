@@ -187,12 +187,20 @@ fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
                             maxLines = 1
                         )
                     } else if (goalTargetAmount != null) {
-                        // 目標当日を含む、目標がある場合は「目標: XX」と表示
-                        AutoSizeText(
-                            text = "目標: %,d".format(goalTargetAmount),
-                            color = contentColor,
-                            maxLines = 1
-                        )
+                        // 目標当日のセルにも、目標以前の日のセルと同様に達成状態を表示する。
+                        // 可能なら predictionDiff を使し、なければ現在残高と目標の差を表示する。
+                        val diff = if (predictionDiff != null) predictionDiff else (dayState.balance - goalTargetAmount)
+                        val prefix = if (diff >= 0) "余" else "不"
+                        val diffColor = if (diff >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
+
+                        val annotated = buildAnnotatedString {
+                            append("目標: %,d\n".format(goalTargetAmount))
+                            withStyle(style = SpanStyle(color = diffColor)) {
+                                append("%s: %,d".format(prefix, abs(diff)))
+                            }
+                        }
+
+                        AutoSizeAnnotatedText(text = annotated)
                     }
                 }
             }
