@@ -91,16 +91,17 @@ object CalendarMonthUiStateFactory {
                     input.monthTransactions.filter { transaction -> transaction.day <= lastGoalDay }
                 )
         val firstActiveGoalDate = activeMonthGoals.minOfOrNull { goal -> goal.toLocalDate() }
-        val priorGoalCutoffDate =
-            firstActiveGoalDate ?: input.today
+        val paidGoalCutoffDate =
+            firstActiveGoalDate?.minusDays(1)
+                ?: monthGoals.maxOfOrNull { goal -> goal.toLocalDate() }
+                ?: LocalDate.of(input.year, input.month + 1, daysInMonth)
         val goalComparisonBalance =
             (
                 balanceUpToLastGoal -
                     input.allGoals
                         .filter { goal ->
                             val goalDate = goal.toLocalDate()
-                            !goalDate.isBefore(input.today) &&
-                                goalDate.isBefore(priorGoalCutoffDate)
+                            !goalDate.isAfter(paidGoalCutoffDate)
                         }
                         .sumOf(FinancialGoal::amount)
             ).coerceAtLeast(0L)
@@ -108,9 +109,7 @@ object CalendarMonthUiStateFactory {
             monthGoals
                 .maxOfOrNull { goal -> goal.toLocalDate() }
                 ?.let { lastMonthGoalDate ->
-                    input.allGoals
-                        .sortedWith(compareBy({ it.year }, { it.month }, { it.day }, { it.id }))
-                        .firstOrNull { goal -> goal.toLocalDate().isAfter(lastMonthGoalDate) }
+                    input.allGoals.firstAfterDate(lastMonthGoalDate)
                 }
         val balanceAfterMonthGoals =
             FinancialCalculator.calculateGoalProjection(

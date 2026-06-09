@@ -24,14 +24,14 @@ android {
         create("release") {
             val ksPath = System.getenv("CALYENDAR_KEY_PATH")
             val ksPass = System.getenv("KEYSTORE_PASSWORD")
-            val keyAl  = "calyendar"
-            val keyPass= System.getenv("KEY_PASSWORD")
+            val keyAliasName = "calyendar"
+            val keyPass = System.getenv("KEY_PASSWORD")
 
             // 環境変数が揃っている時だけ設定（ローカル開発で未設定でもビルドできるように）
-            if (!ksPath.isNullOrBlank() && !ksPass.isNullOrBlank() && !keyAl.isNullOrBlank() && !keyPass.isNullOrBlank()) {
+            if (!ksPath.isNullOrBlank() && !ksPass.isNullOrBlank() && !keyPass.isNullOrBlank()) {
                 storeFile = file(ksPath)
                 storePassword = ksPass
-                keyAlias = keyAl
+                keyAlias = keyAliasName
                 keyPassword = keyPass
             } else {
                 // 未設定なら release 署名は設定されません（CI等で環境変数を入れてください）
@@ -82,15 +82,15 @@ base {
 }
 
 dependencies {
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("net.sf.biweekly:biweekly:0.6.7")
-    implementation("org.mnode.ical4j:ical4j:3.2.6")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("androidx.navigation:navigation-compose:2.9.7")
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
+    implementation(libs.material)
+    implementation(libs.biweekly)
+    implementation(libs.ical4j)
+    implementation(libs.okhttp)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

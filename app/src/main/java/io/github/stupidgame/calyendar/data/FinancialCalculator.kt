@@ -18,18 +18,20 @@ object FinancialCalculator {
         currentDate: LocalDate,
         goalWindowStartDate: LocalDate = currentDate
     ): GoalProjection {
-        val sortedGoals =
-            sortGoals(allGoals).filter { goal ->
-                !goal.toLocalDate().isBefore(goalWindowStartDate)
-            }
+        val allSortedGoals = allGoals.sortedByDateThenId()
+        val visibleGoals =
+            allSortedGoals.filter { goal -> !goal.toLocalDate().isBefore(goalWindowStartDate) }
         val reachedGoalCost =
-            sortedGoals
+            allSortedGoals
                 .filter { goal -> !goal.toLocalDate().isAfter(currentDate) }
                 .sumOf(FinancialGoal::amount)
         val currentBalance = (rawBalance - reachedGoalCost).coerceAtLeast(0L)
         val upcomingGoal =
-            sortedGoals.firstOrNull { goal -> goal.toLocalDate().isAfter(currentDate) }
-        val goalTargetAmount = upcomingGoal?.amount
+            visibleGoals.firstOrNull { goal -> goal.toLocalDate().isAfter(currentDate) }
+        val goalTargetAmount =
+            upcomingGoal?.let { goal ->
+                allGoals.totalAmountOnDate(goal.toLocalDate())
+            }
         val predictionDiff = goalTargetAmount?.let { currentBalance - it }
 
         return GoalProjection(
@@ -50,7 +52,4 @@ object FinancialCalculator {
             }
         }
     }
-
-    private fun sortGoals(allGoals: List<FinancialGoal>): List<FinancialGoal> =
-        allGoals.sortedWith(compareBy({ it.year }, { it.month }, { it.day }, { it.id }))
 }

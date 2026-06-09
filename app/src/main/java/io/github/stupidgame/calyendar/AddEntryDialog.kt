@@ -27,47 +27,17 @@ fun AddGoalDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String, amount: Long) -> Unit
 ) {
-    var name by remember { mutableStateOf(goal?.name ?: "") }
-    var amount by remember { mutableStateOf(goal?.amount?.toString() ?: "") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (goal == null) "目標を追加" else "目標を編集") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("目標の名前") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { value ->
-                        amount = value.filter { it.isDigit() }
-                    },
-                    label = { Text("目標金額") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    amount.toLongOrNull()?.let { onConfirm(name, it) }
-                },
-                enabled = amount.toLongOrNull() != null && name.isNotBlank()
-            ) {
-                Text("保存")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("キャンセル")
-            }
-        }
+    MoneyEntryDialog(
+        labels =
+            MoneyEntryDialogLabels(
+                title = if (goal == null) "目標を追加" else "目標を編集",
+                name = "目標の名前",
+                amount = "目標金額"
+            ),
+        initialName = goal?.name.orEmpty(),
+        initialAmount = goal?.amount?.toString().orEmpty(),
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
     )
 }
 
@@ -78,34 +48,64 @@ fun AddTransactionDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String, amount: Long) -> Unit
 ) {
-    var name by remember { mutableStateOf(transaction?.name ?: "") }
-    var amount by remember { mutableStateOf(transaction?.amount?.toString() ?: "") }
+    MoneyEntryDialog(
+        labels = transactionEntryLabels(type = type, isEditing = transaction != null),
+        initialName = transaction?.name.orEmpty(),
+        initialAmount = transaction?.amount?.toString().orEmpty(),
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
+    )
+}
 
-    val title = when (type) {
-        TransactionType.INCOME -> if (transaction == null) "収入を追加" else "収入を編集"
-        TransactionType.EXPENSE -> if (transaction == null) "支出を追加" else "支出を編集"
-        else -> ""
+private data class MoneyEntryDialogLabels(
+    val title: String,
+    val name: String,
+    val amount: String
+)
+
+private fun transactionEntryLabels(
+    type: TransactionType,
+    isEditing: Boolean
+): MoneyEntryDialogLabels =
+    when (type) {
+        TransactionType.INCOME ->
+            MoneyEntryDialogLabels(
+                title = if (isEditing) "収入を編集" else "収入を追加",
+                name = "詳細",
+                amount = "収入額"
+            )
+
+        TransactionType.EXPENSE ->
+            MoneyEntryDialogLabels(
+                title = if (isEditing) "支出を編集" else "支出を追加",
+                name = "内容",
+                amount = "金額"
+            )
+
+        else -> MoneyEntryDialogLabels(title = "", name = "", amount = "")
     }
-    val nameLabel = when (type) {
-        TransactionType.INCOME -> "詳細"
-        TransactionType.EXPENSE -> "内容"
-        else -> ""
-    }
-    val amountLabel = when (type) {
-        TransactionType.INCOME -> "収入額"
-        TransactionType.EXPENSE -> "金額"
-        else -> ""
-    }
+
+@Composable
+private fun MoneyEntryDialog(
+    labels: MoneyEntryDialogLabels,
+    initialName: String,
+    initialAmount: String,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, amount: Long) -> Unit
+) {
+    var name by remember(initialName) { mutableStateOf(initialName) }
+    var amount by remember(initialAmount) { mutableStateOf(initialAmount) }
+    val parsedAmount = amount.toLongOrNull()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text(labels.title) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(nameLabel) },
+                    label = { Text(labels.name) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -114,7 +114,7 @@ fun AddTransactionDialog(
                     onValueChange = { value ->
                         amount = value.filter { it.isDigit() }
                     },
-                    label = { Text(amountLabel) },
+                    label = { Text(labels.amount) },
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
@@ -123,9 +123,9 @@ fun AddTransactionDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    amount.toLongOrNull()?.let { onConfirm(name, it) }
+                    parsedAmount?.let { onConfirm(name, it) }
                 },
-                enabled = amount.toLongOrNull() != null && name.isNotBlank()
+                enabled = parsedAmount != null && name.isNotBlank()
             ) {
                 Text("保存")
             }

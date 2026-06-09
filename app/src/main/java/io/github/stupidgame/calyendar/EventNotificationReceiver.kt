@@ -9,14 +9,16 @@ import androidx.core.app.NotificationCompat
 class EventNotificationReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val eventTitle =
-            intent.getStringExtra("event_title") ?: context.getString(R.string.notification_default_title)
-        val eventId = intent.getIntExtra("event_id", 0)
+            intent.getStringExtra(NotificationConstants.EXTRA_EVENT_TITLE)
+                ?: context.getString(R.string.notification_default_title)
+        val eventId = intent.getIntExtra(NotificationConstants.EXTRA_EVENT_ID, 0)
 
-        val notification = NotificationCompat.Builder(context, "EVENT_REMINDERS")
+        val notification = NotificationCompat.Builder(context, NotificationConstants.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(eventTitle)
             .setContentText(context.getString(R.string.notification_content_upcoming))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
             .build()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 data class DetailUiState(
     val currentBalance: Long = 0L,
     val goal: FinancialGoal? = null,
+    val goalTargetAmount: Long? = null,
     val dailyTransactions: List<Transaction> = emptyList(),
     val events: List<Event> = emptyList(),
     val icalEvents: List<ImportedEvent> = emptyList(),
@@ -52,10 +53,17 @@ class DetailViewModel(
                     currentDate = predictionDate,
                     goalWindowStartDate = today
                 )
+            val editableGoal =
+                selectEditableDetailGoal(
+                    allGoals = allGoals,
+                    selectedDate = currentDate,
+                    fallbackGoal = predictionProjection.upcomingGoal
+                )
 
             DetailUiState(
                 currentBalance = currentProjection.currentBalance,
-                goal = predictionProjection.upcomingGoal,
+                goal = editableGoal,
+                goalTargetAmount = calculateDetailGoalTargetAmount(allGoals, editableGoal),
                 dailyTransactions = dailyTransactions,
                 events = dailyEvents,
                 icalEvents = importedEvents.filterByStartLocalDate(currentDate),
@@ -121,6 +129,22 @@ class DetailViewModel(
             repository.clearImportedEvents()
         }
     }
+}
+
+internal fun selectEditableDetailGoal(
+    allGoals: List<FinancialGoal>,
+    selectedDate: LocalDate,
+    fallbackGoal: FinancialGoal?
+): FinancialGoal? {
+    return allGoals.firstOnDate(selectedDate) ?: fallbackGoal
+}
+
+internal fun calculateDetailGoalTargetAmount(
+    allGoals: List<FinancialGoal>,
+    goal: FinancialGoal?
+): Long? {
+    if (goal == null) return null
+    return allGoals.totalAmountOnDate(goal.toLocalDate())
 }
 
 class DetailViewModelFactory(
