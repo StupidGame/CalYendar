@@ -187,6 +187,7 @@ fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
                             maxLines = 1
                         )
                     } else if (goalTargetAmount != null) {
+                        // 目標当日を含む、目標がある場合は「目標: XX」と表示
                         AutoSizeText(
                             text = "目標: %,d".format(goalTargetAmount),
                             color = contentColor,
