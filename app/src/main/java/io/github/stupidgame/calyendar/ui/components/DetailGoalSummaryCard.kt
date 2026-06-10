@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.Card
@@ -24,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.stupidgame.calyendar.data.FinancialGoal
 
@@ -31,21 +31,32 @@ import io.github.stupidgame.calyendar.data.FinancialGoal
 @Composable
 fun DetailGoalSummaryCard(
     displayBalance: Long,
-    goal: FinancialGoal?,
-    goalTargetAmount: Long? = goal?.amount,
+    goals: List<FinancialGoal>,
+    goalTargetAmount: Long? = goals.takeIf { it.isNotEmpty() }?.sumOf(FinancialGoal::amount),
     totalGoalCost: Long,
-    onLongClick: () -> Unit,
-    onClick: () -> Unit
+    onGoalLongClick: (FinancialGoal) -> Unit,
+    onGoalClick: (FinancialGoal) -> Unit
 ) {
     val comparisonBalance = displayBalance
+    val singleGoal = goals.singleOrNull()
+    val cardModifier =
+        if (singleGoal != null) {
+            Modifier.fillMaxWidth()
+                .combinedClickable(
+                    onClick = { onGoalClick(singleGoal) },
+                    onLongClick = { onGoalLongClick(singleGoal) }
+                )
+        } else {
+            Modifier.fillMaxWidth()
+        }
 
     Card(
-        modifier =
-            Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        modifier = cardModifier,
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            if (goal != null && goalTargetAmount != null) {
+            if (goals.isNotEmpty() && goalTargetAmount != null) {
+                val firstGoal = goals.first()
                 val percentage =
                     if (goalTargetAmount > 0) {
                         comparisonBalance.toFloat() / goalTargetAmount.toFloat()
@@ -73,14 +84,25 @@ fun DetailGoalSummaryCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = goal.name, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = if (goals.size == 1) firstGoal.name else "目標 ${goals.size}件",
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
                 Text(
-                    text = "期限: ${goal.year}/${goal.month + 1}/${goal.day}",
+                    text = "期限: ${firstGoal.year}/${firstGoal.month + 1}/${firstGoal.day}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+                if (goals.size > 1) {
+                    DetailGoalBreakdown(
+                        goals = goals,
+                        onGoalLongClick = onGoalLongClick,
+                        onGoalClick = onGoalClick
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 LinearProgressIndicator(
                     progress = { percentage.coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth(),
@@ -92,7 +114,14 @@ fun DetailGoalSummaryCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(text = "達成率 %.0f%%".format(percentage * 100))
-                    Text(text = "目標: %,d".format(goalTargetAmount))
+                    Text(
+                        text =
+                            if (goals.size == 1) {
+                                "目標: %,d".format(goalTargetAmount)
+                            } else {
+                                "合計目標: %,d".format(goalTargetAmount)
+                            }
+                    )
                 }
                 Text(
                     text =
@@ -115,6 +144,43 @@ fun DetailGoalSummaryCard(
                         },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DetailGoalBreakdown(
+    goals: List<FinancialGoal>,
+    onGoalLongClick: (FinancialGoal) -> Unit,
+    onGoalClick: (FinancialGoal) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        goals.forEach { goal ->
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .combinedClickable(
+                            onClick = { onGoalClick(goal) },
+                            onLongClick = { onGoalLongClick(goal) }
+                        )
+                        .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = goal.name,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "%,d 円".format(goal.amount),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

@@ -291,11 +291,11 @@ private fun DetailHeader(
     Spacer(modifier = Modifier.height(16.dp))
     DetailGoalSummaryCard(
         displayBalance = uiState.currentBalance,
-        goal = uiState.goal,
+        goals = uiState.goals,
         goalTargetAmount = uiState.goalTargetAmount,
         totalGoalCost = uiState.totalGoalCost,
-        onLongClick = { uiState.goal?.let(onDeleteGoal) },
-        onClick = { uiState.goal?.let(onEditGoal) }
+        onGoalLongClick = onDeleteGoal,
+        onGoalClick = onEditGoal
     )
 }
 
