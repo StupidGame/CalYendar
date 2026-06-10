@@ -34,6 +34,9 @@ data class CalendarUiState(
     val goalComparisonBalance: Long = 0L,
     val monthGoals: List<FinancialGoal> = emptyList(),
     val activeMonthGoals: List<FinancialGoal> = emptyList(),
+    val spanningGoal: FinancialGoal? = null,
+    val spanningGoalTargetAmount: Long? = null,
+    val spanningGoalBalance: Long = 0L,
     val availableMoneyAfterMonthGoals: Long = 0L,
     val hasTransactions: Boolean = false,
     val isCurrentMonth: Boolean = false

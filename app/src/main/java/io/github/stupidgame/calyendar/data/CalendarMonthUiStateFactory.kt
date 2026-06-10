@@ -34,11 +34,13 @@ object CalendarMonthUiStateFactory {
         val monthGoals =
             input.allGoals.filter { goal -> goal.year == input.year && goal.month == input.month }
         val activeMonthGoals =
-            monthGoals.filter { goal -> goal.toLocalDate().isAfter(input.today) }
+            monthGoals.filter { goal -> !goal.toLocalDate().isBefore(input.today) }
 
         var runningBalance =
             FinancialCalculator.calculateDailyBalance(input.transactionsBeforeMonth)
         val daysInMonth = YearMonth.of(input.year, input.month + 1).lengthOfMonth()
+        val monthStartDate = LocalDate.of(input.year, input.month + 1, 1)
+        val monthEndDate = LocalDate.of(input.year, input.month + 1, daysInMonth)
         val dayStates = mutableMapOf<Int, DayState>()
 
         for (day in 1..daysInMonth) {
@@ -115,13 +117,43 @@ object CalendarMonthUiStateFactory {
             FinancialCalculator.calculateGoalProjection(
                 rawBalance = totalMonthBalance,
                 allGoals = input.allGoals,
-                currentDate = LocalDate.of(input.year, input.month + 1, daysInMonth),
+                currentDate = monthEndDate.plusDays(1),
                 goalWindowStartDate = input.today
             ).currentBalance
+        val nextGoalAfterMonthGoalsTargetAmount =
+            nextGoalAfterMonthGoals?.let { goal ->
+                input.allGoals.totalAmountOnDate(goal.toLocalDate())
+            } ?: 0L
         val availableMoneyAfterMonthGoals =
-            balanceAfterMonthGoals - (nextGoalAfterMonthGoals?.amount ?: 0L)
+            balanceAfterMonthGoals - nextGoalAfterMonthGoalsTargetAmount
         val isCurrentMonth =
             input.year == input.today.year && input.month == input.today.monthValue - 1
+        val spanningWindowStartDate =
+            if (input.today.isAfter(monthStartDate)) input.today else monthStartDate
+        val spanningGoal =
+            if (activeMonthGoals.isEmpty() && !monthEndDate.isBefore(input.today)) {
+                input.allGoals.sortedByDateThenId().firstOrNull { goal ->
+                    val goalDate = goal.toLocalDate()
+                    !goalDate.isBefore(spanningWindowStartDate) && goalDate.isAfter(monthEndDate)
+                }
+            } else {
+                null
+            }
+        val spanningGoalTargetAmount =
+            spanningGoal?.let { goal -> input.allGoals.totalAmountOnDate(goal.toLocalDate()) }
+        val spanningGoalBalance =
+            if (spanningGoal == null) {
+                0L
+            } else if (isCurrentMonth) {
+                todayBalance
+            } else {
+                FinancialCalculator.calculateGoalProjection(
+                    rawBalance = totalMonthBalance,
+                    allGoals = input.allGoals,
+                    currentDate = monthEndDate,
+                    goalWindowStartDate = input.today
+                ).currentBalance
+            }
 
         return CalendarUiState(
             year = input.year,
@@ -133,6 +165,9 @@ object CalendarMonthUiStateFactory {
             goalComparisonBalance = goalComparisonBalance,
             monthGoals = monthGoals,
             activeMonthGoals = activeMonthGoals,
+            spanningGoal = spanningGoal,
+            spanningGoalTargetAmount = spanningGoalTargetAmount,
+            spanningGoalBalance = spanningGoalBalance,
             availableMoneyAfterMonthGoals = availableMoneyAfterMonthGoals,
             hasTransactions = input.monthTransactions.isNotEmpty(),
             isCurrentMonth = isCurrentMonth

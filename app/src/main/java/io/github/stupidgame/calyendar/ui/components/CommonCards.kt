@@ -234,8 +234,10 @@ fun IcalEventCard(event: ImportedEvent, onLongClick: () -> Unit) {
 fun MonthlyGoalCard(uiState: CalendarUiState) {
         val monthGoals = uiState.monthGoals
         val activeMonthGoals = uiState.activeMonthGoals
+        val spanningGoal = uiState.spanningGoal
+        val spanningGoalTargetAmount = uiState.spanningGoalTargetAmount
 
-        if (monthGoals.isEmpty()) {
+        if (monthGoals.isEmpty() && spanningGoal == null) {
                 if (uiState.hasTransactions) { // 現在月でなくても、取引履歴があれば表示
                         val availableMoney =
                                 if (uiState.isCurrentMonth) uiState.todayBalance
@@ -264,6 +266,71 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                         Text(
                                                 "%,d 円".format(availableMoney),
                                                 style = MaterialTheme.typography.headlineMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = contentColor
+                                        )
+                                }
+                        }
+                }
+                return
+        }
+
+        if (activeMonthGoals.isEmpty() && spanningGoal != null && spanningGoalTargetAmount != null) {
+                val difference = uiState.spanningGoalBalance - spanningGoalTargetAmount
+                val cardColor =
+                        getGradientColor(uiState.spanningGoalBalance, spanningGoalTargetAmount)
+                val contentColor = if (cardColor.luminance() > 0.5f) Color.Black else Color.White
+
+                Card(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = cardColor),
+                        shape = RoundedCornerShape(16.dp)
+                ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                        "次の目標",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = contentColor
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                        Text(
+                                                "%s (%d月%d日)"
+                                                        .format(
+                                                                spanningGoal.name,
+                                                                spanningGoal.month + 1,
+                                                                spanningGoal.day
+                                                        ),
+                                                color = contentColor
+                                        )
+                                        Text(
+                                                "%,d".format(spanningGoalTargetAmount),
+                                                color = contentColor
+                                        )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                        Text("現在残高", color = contentColor)
+                                        Text(
+                                                "%,d".format(uiState.spanningGoalBalance),
+                                                fontWeight = FontWeight.Bold,
+                                                color = contentColor
+                                        )
+                                }
+                                Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                        Text("差額", fontWeight = FontWeight.Bold, color = contentColor)
+                                        Text(
+                                                "%,d".format(difference),
                                                 fontWeight = FontWeight.Bold,
                                                 color = contentColor
                                         )

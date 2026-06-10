@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 
 data class DetailUiState(
     val currentBalance: Long = 0L,
+    val goal: FinancialGoal? = null,
     val goals: List<FinancialGoal> = emptyList(),
     val goalTargetAmount: Long? = null,
     val dailyTransactions: List<Transaction> = emptyList(),
@@ -54,7 +55,7 @@ class DetailViewModel(
                     goalWindowStartDate = today
                 )
             val detailGoals =
-                selectEditableDetailGoals(
+                selectDetailGoals(
                     allGoals = allGoals,
                     selectedDate = currentDate,
                     fallbackGoal = predictionProjection.upcomingGoal
@@ -62,8 +63,9 @@ class DetailViewModel(
 
             DetailUiState(
                 currentBalance = currentProjection.currentBalance,
+                goal = detailGoals.firstOrNull(),
                 goals = detailGoals,
-                goalTargetAmount = calculateDetailGoalTargetAmount(detailGoals),
+                goalTargetAmount = detailGoals.firstOrNull()?.amount,
                 dailyTransactions = dailyTransactions,
                 events = dailyEvents,
                 icalEvents = importedEvents.filterByStartLocalDate(currentDate),
@@ -135,20 +137,28 @@ internal fun selectEditableDetailGoals(
     allGoals: List<FinancialGoal>,
     selectedDate: LocalDate,
     fallbackGoal: FinancialGoal?
-): List<FinancialGoal> {
-    val selectedDateGoals = allGoals.onDate(selectedDate)
-    if (selectedDateGoals.isNotEmpty()) return selectedDateGoals
-
-    return fallbackGoal
-        ?.let { goal ->
-            allGoals.onDate(goal.toLocalDate()).ifEmpty { listOf(goal) }
-        }
-        .orEmpty()
+): FinancialGoal? {
+    return selectDetailGoals(allGoals, selectedDate, fallbackGoal).firstOrNull()
 }
 
-internal fun calculateDetailGoalTargetAmount(goals: List<FinancialGoal>): Long? {
-    if (goals.isEmpty()) return null
-    return goals.sumOf(FinancialGoal::amount)
+internal fun selectDetailGoals(
+    allGoals: List<FinancialGoal>,
+    selectedDate: LocalDate,
+    fallbackGoal: FinancialGoal?
+): List<FinancialGoal> {
+    val selectedDateGoals = allGoals.allOnDate(selectedDate)
+    if (selectedDateGoals.isNotEmpty()) return selectedDateGoals
+
+    val fallbackDate = fallbackGoal?.toLocalDate() ?: return emptyList()
+    return allGoals.allOnDate(fallbackDate).ifEmpty { listOf(fallbackGoal) }
+}
+
+@Suppress("UNUSED_PARAMETER")
+internal fun calculateDetailGoalTargetAmount(
+    allGoals: List<FinancialGoal>,
+    goal: FinancialGoal?
+): Long? {
+    return goal?.amount
 }
 
 class DetailViewModelFactory(

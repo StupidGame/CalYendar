@@ -101,7 +101,7 @@ class GoalComparisonSnapshotCalculatorTest {
     }
 
     @Test
-    fun `subtracts a goal on the current date from widget balance`() {
+    fun `keeps a goal on the current date in the widget balance`() {
         val transactions =
             listOf(
                 Transaction(
@@ -140,10 +140,10 @@ class GoalComparisonSnapshotCalculatorTest {
                 currentDate = LocalDate.of(2026, 3, 18)
             )
 
-        assertEquals(30_000L, snapshot.currentBalance)
-        assertEquals(-10_000L, snapshot.availableBalance)
-        assertEquals("future", snapshot.nextGoal?.name)
-        assertEquals(40_000L, snapshot.nextGoalTargetAmount)
+        assertEquals(100_000L, snapshot.currentBalance)
+        assertEquals(30_000L, snapshot.availableBalance)
+        assertEquals("today", snapshot.nextGoal?.name)
+        assertEquals(70_000L, snapshot.nextGoalTargetAmount)
     }
 
     @Test

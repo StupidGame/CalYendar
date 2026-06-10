@@ -55,13 +55,35 @@ class DetailViewModelTest {
     }
 
     @Test
-    fun `detail goal target amount sums visible goals`() {
-        val firstGoal = goal(id = 1, date = LocalDate.of(2026, 5, 14), amount = 10_000)
-        val secondGoal = goal(id = 2, date = LocalDate.of(2026, 5, 14), amount = 20_000)
+    fun `detail goals include every goal on the selected date`() {
+        val selectedGoal = goal(id = 1, date = LocalDate.of(2026, 5, 14), amount = 10_000)
+        val sameDayGoal = goal(id = 2, date = LocalDate.of(2026, 5, 14), amount = 20_000)
+        val anotherDayGoal = goal(id = 3, date = LocalDate.of(2026, 5, 20), amount = 30_000)
 
-        val result = calculateDetailGoalTargetAmount(listOf(firstGoal, secondGoal))
+        val result =
+            selectDetailGoals(
+                allGoals = listOf(anotherDayGoal, sameDayGoal, selectedGoal),
+                selectedDate = LocalDate.of(2026, 5, 14),
+                fallbackGoal = anotherDayGoal
+            )
 
-        assertEquals(30_000L, result)
+        assertEquals(listOf(selectedGoal, sameDayGoal), result)
+    }
+
+    @Test
+    fun `detail goals include every goal on the fallback date`() {
+        val fallbackGoal = goal(id = 1, date = LocalDate.of(2026, 5, 20), amount = 10_000)
+        val sameDayGoal = goal(id = 2, date = LocalDate.of(2026, 5, 20), amount = 20_000)
+        val pastGoal = goal(id = 3, date = LocalDate.of(2026, 5, 10), amount = 30_000)
+
+        val result =
+            selectDetailGoals(
+                allGoals = listOf(sameDayGoal, pastGoal, fallbackGoal),
+                selectedDate = LocalDate.of(2026, 5, 14),
+                fallbackGoal = fallbackGoal
+            )
+
+        assertEquals(listOf(fallbackGoal, sameDayGoal), result)
     }
 
     @Test

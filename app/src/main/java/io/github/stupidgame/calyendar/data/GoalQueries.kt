@@ -11,7 +11,7 @@ internal fun List<FinancialGoal>.sortedByDateThenId(): List<FinancialGoal> =
 internal fun List<FinancialGoal>.firstOnDate(date: LocalDate): FinancialGoal? =
     sortedByDateThenId().firstOrNull { goal -> goal.toLocalDate() == date }
 
-internal fun List<FinancialGoal>.onDate(date: LocalDate): List<FinancialGoal> =
+internal fun List<FinancialGoal>.allOnDate(date: LocalDate): List<FinancialGoal> =
     sortedByDateThenId().filter { goal -> goal.toLocalDate() == date }
 
 internal fun List<FinancialGoal>.firstAfterDate(date: LocalDate): FinancialGoal? =
