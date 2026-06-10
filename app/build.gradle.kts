@@ -60,11 +60,13 @@ android {
     buildFeatures {
         compose = true
     }
-    packagingOptions {
-        resources.excludes.add("META-INF/versions/9/module-info.class")
-        resources.excludes.add("META-INF/INDEX.LIST")
-        resources.excludes.add("META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule")
-        resources.excludes.add("META-INF/groovy-release-info.properties")
+    packaging {
+        resources {
+            excludes += "META-INF/versions/9/module-info.class"
+            excludes += "META-INF/INDEX.LIST"
+            excludes += "META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule"
+            excludes += "META-INF/groovy-release-info.properties"
+        }
     }
 }
 
