@@ -291,30 +291,14 @@ private fun DetailHeader(
     Spacer(modifier = Modifier.height(16.dp))
     val goals = uiState.goals.ifEmpty { uiState.goal?.let { listOf(it) } ?: emptyList() }
 
-    if (goals.isEmpty()) {
-        DetailGoalSummaryCard(
-            displayBalance = uiState.currentBalance,
-            goal = null,
-            goalTargetAmount = null,
-            totalGoalCost = uiState.totalGoalCost,
-            onLongClick = {},
-            onClick = {}
-        )
-    } else {
-        goals.forEachIndexed { index, goal ->
-            if (index > 0) {
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            DetailGoalSummaryCard(
-                displayBalance = uiState.currentBalance,
-                goal = goal,
-                goalTargetAmount = goal.amount,
-                totalGoalCost = uiState.totalGoalCost,
-                onLongClick = { onDeleteGoal(goal) },
-                onClick = { onEditGoal(goal) }
-            )
-        }
-    }
+    DetailGoalSummaryCard(
+        displayBalance = uiState.currentBalance,
+        goals = goals,
+        goalTargetAmount = uiState.goalTargetAmount,
+        totalGoalCost = uiState.totalGoalCost,
+        onGoalLongClick = onDeleteGoal,
+        onGoalClick = onEditGoal
+    )
 }
 
 private fun LazyListScope.eventSections(

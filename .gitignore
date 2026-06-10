@@ -20,3 +20,4 @@ CalYendar_Key_for_Github_Actions.txt
 *.keystore
 keystore.properties
 
+.android-sdk/

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.Card
@@ -27,12 +26,50 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.stupidgame.calyendar.data.FinancialGoal
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DetailGoalSummaryCard(
     displayBalance: Long,
+    goals: List<FinancialGoal>,
+    goalTargetAmount: Long? = goals.firstOrNull()?.amount,
+    totalGoalCost: Long,
+    onGoalLongClick: (FinancialGoal) -> Unit,
+    onGoalClick: (FinancialGoal) -> Unit
+) {
+    if (goals.isEmpty()) {
+        SingleDetailGoalSummaryCard(
+            displayBalance = displayBalance,
+            goal = null,
+            goalTargetAmount = null,
+            totalGoalCost = totalGoalCost,
+            onLongClick = {},
+            onClick = {}
+        )
+    } else {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            goals.forEach { goal ->
+                SingleDetailGoalSummaryCard(
+                    displayBalance = displayBalance,
+                    goal = goal,
+                    goalTargetAmount =
+                        if (goals.size == 1) goalTargetAmount ?: goal.amount else goal.amount,
+                    totalGoalCost = totalGoalCost,
+                    onLongClick = { onGoalLongClick(goal) },
+                    onClick = { onGoalClick(goal) }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SingleDetailGoalSummaryCard(
+    displayBalance: Long,
     goal: FinancialGoal?,
-    goalTargetAmount: Long? = goal?.amount,
+    goalTargetAmount: Long?,
     totalGoalCost: Long,
     onLongClick: () -> Unit,
     onClick: () -> Unit
