@@ -133,7 +133,7 @@ class DetailViewModel(
     }
 }
 
-internal fun selectEditableDetailGoal(
+internal fun selectEditableDetailGoals(
     allGoals: List<FinancialGoal>,
     selectedDate: LocalDate,
     fallbackGoal: FinancialGoal?
