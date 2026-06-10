@@ -65,7 +65,7 @@ class DetailViewModel(
                 currentBalance = currentProjection.currentBalance,
                 goal = detailGoals.firstOrNull(),
                 goals = detailGoals,
-                goalTargetAmount = detailGoals.firstOrNull()?.amount,
+                goalTargetAmount = calculateDetailGoalTargetAmount(detailGoals),
                 dailyTransactions = dailyTransactions,
                 events = dailyEvents,
                 icalEvents = importedEvents.filterByStartLocalDate(currentDate),
@@ -133,12 +133,12 @@ class DetailViewModel(
     }
 }
 
-internal fun selectEditableDetailGoal(
+internal fun selectEditableDetailGoals(
     allGoals: List<FinancialGoal>,
     selectedDate: LocalDate,
     fallbackGoal: FinancialGoal?
-): FinancialGoal? {
-    return selectDetailGoals(allGoals, selectedDate, fallbackGoal).firstOrNull()
+): List<FinancialGoal> {
+    return selectDetailGoals(allGoals, selectedDate, fallbackGoal)
 }
 
 internal fun selectDetailGoals(
@@ -153,13 +153,8 @@ internal fun selectDetailGoals(
     return allGoals.allOnDate(fallbackDate).ifEmpty { listOf(fallbackGoal) }
 }
 
-@Suppress("UNUSED_PARAMETER")
-internal fun calculateDetailGoalTargetAmount(
-    allGoals: List<FinancialGoal>,
-    goal: FinancialGoal?
-): Long? {
-    return goal?.amount
-}
+internal fun calculateDetailGoalTargetAmount(goals: List<FinancialGoal>): Long? =
+    goals.takeIf { it.isNotEmpty() }?.sumOf(FinancialGoal::amount)
 
 class DetailViewModelFactory(
     private val repository: CalYendarRepository,

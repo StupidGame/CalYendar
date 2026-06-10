@@ -8,48 +8,50 @@ import org.junit.Test
 class DetailViewModelTest {
 
     @Test
-    fun `editable detail goal prefers a goal on the selected date`() {
-        val sameDayGoal = goal(id = 1, date = LocalDate.of(2026, 5, 14), amount = 10_000)
+    fun `editable detail goals prefer all goals on the selected date`() {
+        val firstSameDayGoal = goal(id = 1, date = LocalDate.of(2026, 5, 14), amount = 10_000)
+        val secondSameDayGoal = goal(id = 3, date = LocalDate.of(2026, 5, 14), amount = 5_000)
         val fallbackGoal = goal(id = 2, date = LocalDate.of(2026, 5, 20), amount = 20_000)
 
         val result =
-            selectEditableDetailGoal(
-                allGoals = listOf(fallbackGoal, sameDayGoal),
+            selectEditableDetailGoals(
+                allGoals = listOf(fallbackGoal, secondSameDayGoal, firstSameDayGoal),
                 selectedDate = LocalDate.of(2026, 5, 14),
                 fallbackGoal = fallbackGoal
             )
 
-        assertEquals(sameDayGoal, result)
+        assertEquals(listOf(firstSameDayGoal, secondSameDayGoal), result)
     }
 
     @Test
-    fun `editable detail goal prefers a past goal on the selected date`() {
+    fun `editable detail goals prefer past goals on the selected date`() {
         val pastGoal = goal(id = 1, date = LocalDate.of(2026, 5, 13), amount = 10_000)
         val fallbackGoal = goal(id = 2, date = LocalDate.of(2026, 5, 20), amount = 20_000)
 
         val result =
-            selectEditableDetailGoal(
+            selectEditableDetailGoals(
                 allGoals = listOf(pastGoal, fallbackGoal),
                 selectedDate = LocalDate.of(2026, 5, 13),
                 fallbackGoal = fallbackGoal
             )
 
-        assertEquals(pastGoal, result)
+        assertEquals(listOf(pastGoal), result)
     }
 
     @Test
-    fun `editable detail goal keeps the fallback when the selected date has no goal`() {
+    fun `editable detail goals keep all fallback date goals when the selected date has no goal`() {
         val pastGoal = goal(id = 1, date = LocalDate.of(2026, 5, 13), amount = 10_000)
         val fallbackGoal = goal(id = 2, date = LocalDate.of(2026, 5, 20), amount = 20_000)
+        val sameFallbackDateGoal = goal(id = 3, date = LocalDate.of(2026, 5, 20), amount = 5_000)
 
         val result =
-            selectEditableDetailGoal(
-                allGoals = listOf(pastGoal, fallbackGoal),
+            selectEditableDetailGoals(
+                allGoals = listOf(pastGoal, sameFallbackDateGoal, fallbackGoal),
                 selectedDate = LocalDate.of(2026, 5, 12),
                 fallbackGoal = fallbackGoal
             )
 
-        assertEquals(fallbackGoal, result)
+        assertEquals(listOf(fallbackGoal, sameFallbackDateGoal), result)
     }
 
     @Test
@@ -86,9 +88,20 @@ class DetailViewModelTest {
 
     @Test
     fun `detail goal target amount is null when there is no goal`() {
-        val result = calculateDetailGoalTargetAmount(allGoals = emptyList(), goal = null)
+        val result = calculateDetailGoalTargetAmount(emptyList())
 
         assertNull(result)
+    }
+
+
+    @Test
+    fun `detail goal target amount sums every detail goal`() {
+        val firstGoal = goal(id = 1, date = LocalDate.of(2026, 5, 20), amount = 10_000)
+        val secondGoal = goal(id = 2, date = LocalDate.of(2026, 5, 20), amount = 5_000)
+
+        val result = calculateDetailGoalTargetAmount(listOf(firstGoal, secondGoal))
+
+        assertEquals(15_000, result)
     }
 
     private fun goal(
@@ -101,7 +114,7 @@ class DetailViewModelTest {
             year = date.year,
             month = date.monthValue - 1,
             day = date.dayOfMonth,
-            name = "goal-${date.dayOfMonth}",
+            name = "goal-${date.dayOfMonth}-$id",
             amount = amount
         )
 }
