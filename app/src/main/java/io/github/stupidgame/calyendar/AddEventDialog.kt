@@ -53,6 +53,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
@@ -105,6 +106,12 @@ private fun List<Long>.withNotificationLeadTime(minutes: Long): List<Long> {
         this
     }
 }
+
+private fun LocalDate.toDatePickerMillis(): Long =
+    atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun Long.toDatePickerLocalDate(): LocalDate =
+    Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -175,6 +182,8 @@ fun AddEventDialog(
     var selectedDays by remember { mutableStateOf(setOf<Int>()) }
 
     val scrollState = rememberScrollState()
+    val isTimeRangeValid = endDate.atTime(endTime).isAfter(startDate.atTime(startTime))
+    val isRepeatRangeValid = repeatType == EventRepeatType.NONE || !repeatUntil.isBefore(startDate)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -439,6 +448,8 @@ fun AddEventDialog(
                 },
                 enabled =
                     title.isNotBlank() &&
+                        isTimeRangeValid &&
+                        isRepeatRangeValid &&
                         (repeatType != EventRepeatType.WEEKDAY_SELECTION ||
                             selectedDays.isNotEmpty())
             ) {
@@ -453,14 +464,18 @@ fun AddEventDialog(
     )
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = if (editingStartDate) startDate.atStartOfDay(zoneId).toInstant().toEpochMilli() else endDate.atStartOfDay(zoneId).toInstant().toEpochMilli())
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis =
+                if (editingStartDate) startDate.toDatePickerMillis()
+                else endDate.toDatePickerMillis()
+        )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
-                Button(onClick = { 
+                Button(onClick = {
                     showDatePicker = false
                     datePickerState.selectedDateMillis?.let {
-                        val localDate = Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
+                        val localDate = it.toDatePickerLocalDate()
                         if (editingStartDate) {
                             startDate = localDate
                         } else {
@@ -482,14 +497,15 @@ fun AddEventDialog(
     }
 
     if (showRepeatUntilPicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = repeatUntil.atStartOfDay(zoneId).toInstant().toEpochMilli())
+        val datePickerState =
+            rememberDatePickerState(initialSelectedDateMillis = repeatUntil.toDatePickerMillis())
         DatePickerDialog(
             onDismissRequest = { showRepeatUntilPicker = false },
             confirmButton = {
                 Button(onClick = {
                     showRepeatUntilPicker = false
                     datePickerState.selectedDateMillis?.let {
-                        repeatUntil = Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate()
+                        repeatUntil = it.toDatePickerLocalDate()
                     }
                 }) {
                     Text(stringResource(R.string.action_confirm))
@@ -512,7 +528,7 @@ fun AddEventDialog(
             title = { Text(if (editingStartDate) "開始時刻" else "終了時刻") },
             text = { TimePicker(state = timePickerState) },
             confirmButton = {
-                Button(onClick = { 
+                Button(onClick = {
                     showTimePicker = false
                     val localTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
                     if (editingStartDate) {
