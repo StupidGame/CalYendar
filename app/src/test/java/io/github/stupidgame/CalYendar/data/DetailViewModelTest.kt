@@ -93,6 +93,17 @@ class DetailViewModelTest {
         assertNull(result)
     }
 
+
+    @Test
+    fun `detail goal target amount sums every detail goal`() {
+        val firstGoal = goal(id = 1, date = LocalDate.of(2026, 5, 20), amount = 10_000)
+        val secondGoal = goal(id = 2, date = LocalDate.of(2026, 5, 20), amount = 5_000)
+
+        val result = calculateDetailGoalTargetAmount(listOf(firstGoal, secondGoal))
+
+        assertEquals(15_000, result)
+    }
+
     private fun goal(
         id: Int,
         date: LocalDate,
