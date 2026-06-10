@@ -7,7 +7,7 @@ import org.junit.Test
 class FinancialCalculatorTest {
 
     @Test
-    fun `goal projection subtracts a goal on the current date and moves to the next goal`() {
+    fun `goal projection keeps a goal on the current date as upcoming`() {
         val result =
             FinancialCalculator.calculateGoalProjection(
                 rawBalance = 200_000L,
@@ -21,11 +21,11 @@ class FinancialCalculatorTest {
                 goalWindowStartDate = LocalDate.of(2026, 3, 18)
             )
 
-        assertEquals(130_000L, result.currentBalance)
-        assertEquals(70_000L, result.reachedGoalCost)
-        assertEquals("goal-25", result.upcomingGoal?.name)
-        assertEquals(50_000L, result.goalTargetAmount)
-        assertEquals(80_000L, result.predictionDiff)
+        assertEquals(170_000L, result.currentBalance)
+        assertEquals(30_000L, result.reachedGoalCost)
+        assertEquals("goal-18", result.upcomingGoal?.name)
+        assertEquals(40_000L, result.goalTargetAmount)
+        assertEquals(130_000L, result.predictionDiff)
     }
 
     @Test
@@ -92,7 +92,7 @@ class FinancialCalculatorTest {
     }
 
     @Test
-    fun `goal projection subtracts a goal on its date`() {
+    fun `goal projection does not subtract a goal on its date`() {
         val result =
             FinancialCalculator.calculateGoalProjection(
                 rawBalance = 5_000L,
@@ -105,11 +105,11 @@ class FinancialCalculatorTest {
                 goalWindowStartDate = LocalDate.of(2026, 3, 1)
             )
 
-        assertEquals(4_000L, result.currentBalance)
-        assertEquals(1_000L, result.reachedGoalCost)
-        assertEquals("goal-5", result.upcomingGoal?.name)
-        assertEquals(3_000L, result.goalTargetAmount)
-        assertEquals(1_000L, result.predictionDiff)
+        assertEquals(5_000L, result.currentBalance)
+        assertEquals(0L, result.reachedGoalCost)
+        assertEquals("goal-15", result.upcomingGoal?.name)
+        assertEquals(1_000L, result.goalTargetAmount)
+        assertEquals(4_000L, result.predictionDiff)
     }
 
     @Test
@@ -134,7 +134,7 @@ class FinancialCalculatorTest {
     }
 
     @Test
-    fun `goal projection keeps current balance at zero or above`() {
+    fun `goal projection compares a current date goal before subtracting it`() {
         val result =
             FinancialCalculator.calculateGoalProjection(
                 rawBalance = 20_000L,
@@ -147,10 +147,11 @@ class FinancialCalculatorTest {
                 goalWindowStartDate = LocalDate.of(2026, 3, 18)
             )
 
-        assertEquals(0L, result.currentBalance)
-        assertEquals(40_000L, result.reachedGoalCost)
-        assertEquals("goal-25", result.upcomingGoal?.name)
-        assertEquals(-50_000L, result.predictionDiff)
+        assertEquals(20_000L, result.currentBalance)
+        assertEquals(0L, result.reachedGoalCost)
+        assertEquals("goal-18", result.upcomingGoal?.name)
+        assertEquals(40_000L, result.goalTargetAmount)
+        assertEquals(-20_000L, result.predictionDiff)
     }
 
     @Test
