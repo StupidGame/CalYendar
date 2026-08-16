@@ -369,7 +369,11 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
                                         Text(
-                                                "現時点で使えるお金",
+                                                if (uiState.isPastMonth) {
+                                                        "最終的に残ったお金"
+                                                } else {
+                                                        "現時点で使えるお金"
+                                                },
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = contentColor
                                         )

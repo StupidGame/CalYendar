@@ -39,7 +39,8 @@ data class CalendarUiState(
     val spanningGoalBalance: Long = 0L,
     val availableMoneyAfterMonthGoals: Long = 0L,
     val hasTransactions: Boolean = false,
-    val isCurrentMonth: Boolean = false
+    val isCurrentMonth: Boolean = false,
+    val isPastMonth: Boolean = false
 )
 
 private data class CalendarMonthSourceData(
