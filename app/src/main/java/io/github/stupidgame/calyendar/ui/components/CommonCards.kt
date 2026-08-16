@@ -236,6 +236,7 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
         val activeMonthGoals = uiState.activeMonthGoals
         val spanningGoal = uiState.spanningGoal
         val spanningGoalTargetAmount = uiState.spanningGoalTargetAmount
+        val isFutureMonth = !uiState.isCurrentMonth && !uiState.isPastMonth
 
         if (monthGoals.isEmpty() && spanningGoal == null) {
                 if (uiState.hasTransactions) { // 現在月でなくても、取引履歴があれば表示
@@ -258,7 +259,11 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
                                         Text(
-                                                "現在の残高",
+                                                if (isFutureMonth) {
+                                                        "月末時点での残高"
+                                                } else {
+                                                        "現在の残高"
+                                                },
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = contentColor
@@ -317,7 +322,14 @@ fun MonthlyGoalCard(uiState: CalendarUiState) {
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                        Text("現在残高", color = contentColor)
+                                        Text(
+                                                if (isFutureMonth) {
+                                                        "月末時点での残高"
+                                                } else {
+                                                        "現在残高"
+                                                },
+                                                color = contentColor
+                                        )
                                         Text(
                                                 "%,d".format(uiState.spanningGoalBalance),
                                                 fontWeight = FontWeight.Bold,
