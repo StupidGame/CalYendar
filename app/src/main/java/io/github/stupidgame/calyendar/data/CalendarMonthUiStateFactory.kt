@@ -128,6 +128,8 @@ object CalendarMonthUiStateFactory {
             balanceAfterMonthGoals - nextGoalAfterMonthGoalsTargetAmount
         val isCurrentMonth =
             input.year == input.today.year && input.month == input.today.monthValue - 1
+        val isPastMonth =
+            YearMonth.of(input.year, input.month + 1).isBefore(YearMonth.from(input.today))
         val spanningWindowStartDate =
             if (input.today.isAfter(monthStartDate)) input.today else monthStartDate
         val spanningGoal =
@@ -170,7 +172,8 @@ object CalendarMonthUiStateFactory {
             spanningGoalBalance = spanningGoalBalance,
             availableMoneyAfterMonthGoals = availableMoneyAfterMonthGoals,
             hasTransactions = input.monthTransactions.isNotEmpty(),
-            isCurrentMonth = isCurrentMonth
+            isCurrentMonth = isCurrentMonth,
+            isPastMonth = isPastMonth
         )
     }
 

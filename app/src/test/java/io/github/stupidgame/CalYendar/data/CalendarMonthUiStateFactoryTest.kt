@@ -87,6 +87,7 @@ class CalendarMonthUiStateFactoryTest {
         assertEquals(30L, state.todayAvailableBalance)
         assertEquals(70L, state.currentBalance)
         assertEquals(30L, state.availableMoneyAfterMonthGoals)
+        assertTrue(!state.isPastMonth)
         assertTrue(state.activeMonthGoals.isEmpty())
         assertEquals("goal-5", state.spanningGoal?.name)
         assertEquals(40L, state.spanningGoalTargetAmount)
@@ -352,6 +353,7 @@ class CalendarMonthUiStateFactoryTest {
 
         assertEquals(300L, state.currentBalance)
         assertEquals(200L, state.availableMoneyAfterMonthGoals)
+        assertTrue(state.isPastMonth)
         assertTrue(state.activeMonthGoals.isEmpty())
     }
 
@@ -410,6 +412,7 @@ class CalendarMonthUiStateFactoryTest {
         assertEquals("goal-5", state.spanningGoal?.name)
         assertEquals(120L, state.spanningGoalTargetAmount)
         assertEquals(150L, state.spanningGoalBalance)
+        assertTrue(!state.isPastMonth)
         assertEquals("goal-5", firstDayCell.goal?.name)
         assertEquals(120L, firstDayCell.goalTargetAmount)
         assertEquals(30L, firstDayCell.predictionDiff)
