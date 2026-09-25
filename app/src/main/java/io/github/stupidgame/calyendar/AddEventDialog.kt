@@ -91,12 +91,13 @@ private fun ZoneId.toJapaneseLabel(): String {
 
 private fun customNotificationMinutes(valueText: String, unit: String): Long {
     val value = valueText.toLongOrNull() ?: return 0L
-    return when (unit) {
-        "分" -> value
-        "時間" -> value * 60
-        "日" -> value * 60 * 24
-        else -> 0L
+    val multiplier = when (unit) {
+        "分" -> 1L
+        "時間" -> 60L
+        "日" -> 1440L
+        else -> return 0L
     }
+    return runCatching { Math.multiplyExact(value, multiplier) }.getOrDefault(0L)
 }
 
 private fun List<Long>.withNotificationLeadTime(minutes: Long): List<Long> {
@@ -137,10 +138,16 @@ fun AddEventDialog(
     ) -> Unit
 ) {
     var title by remember { mutableStateOf(event?.title ?: "") }
-    val initialStartDate = event?.let { Instant.ofEpochMilli(it.startTime).atZone(ZoneId.systemDefault()).toLocalDate() } ?: LocalDate.of(year, month + 1, day)
-    val initialStartTime = event?.let { Instant.ofEpochMilli(it.startTime).atZone(ZoneId.systemDefault()).toLocalTime() } ?: LocalTime.now()
-    val initialEndDate = event?.let { Instant.ofEpochMilli(it.endTime).atZone(ZoneId.systemDefault()).toLocalDate() } ?: LocalDate.of(year, month + 1, day)
-    val initialEndTime = event?.let { Instant.ofEpochMilli(it.endTime).atZone(ZoneId.systemDefault()).toLocalTime() } ?: LocalTime.now().plusHours(1)
+    val zone = ZoneId.systemDefault()
+    val defaultStart = remember(year, month, day) {
+        LocalDate.of(year, month + 1, day).atTime(LocalTime.now().withSecond(0).withNano(0)).atZone(zone)
+    }
+    val initialStart = event?.let { Instant.ofEpochMilli(it.startTime).atZone(zone) } ?: defaultStart
+    val initialEnd = event?.let { Instant.ofEpochMilli(it.endTime).atZone(zone) } ?: defaultStart.plusHours(1)
+    val initialStartDate = initialStart.toLocalDate()
+    val initialStartTime = initialStart.toLocalTime()
+    val initialEndDate = initialEnd.toLocalDate()
+    val initialEndTime = initialEnd.toLocalTime()
 
     var startDate by remember { mutableStateOf(initialStartDate) }
     var startTime by remember { mutableStateOf(initialStartTime) }

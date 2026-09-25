@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -107,10 +108,11 @@ class DetailViewModel(
         event: Event,
         repeatType: EventRepeatType,
         repeatUntil: LocalDate?,
-        repeatDays: Set<Int>
+        repeatDays: Set<Int>,
+        zoneId: ZoneId = ZoneId.systemDefault()
     ) {
         viewModelScope.launch {
-            eventSyncService.upsertRepeatedEvent(event, repeatType, repeatUntil, repeatDays)
+            eventSyncService.upsertRepeatedEvent(event, repeatType, repeatUntil, repeatDays, zoneId)
         }
     }
 

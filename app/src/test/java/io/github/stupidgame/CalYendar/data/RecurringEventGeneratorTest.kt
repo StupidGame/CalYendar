@@ -69,6 +69,36 @@ class RecurringEventGeneratorTest {
         )
     }
 
+    @Test
+    fun `keeps overnight end date for each recurring event`() {
+        val tokyo = ZoneId.of("Asia/Tokyo")
+        val firstDay = LocalDate.of(2026, 6, 1)
+        val base = Event(
+            year = firstDay.year,
+            month = firstDay.monthValue - 1,
+            day = firstDay.dayOfMonth,
+            title = "Night shift",
+            startTime = firstDay.atTime(23, 30).atZone(tokyo).toInstant().toEpochMilli(),
+            endTime = firstDay.plusDays(1).atTime(1, 0).atZone(tokyo).toInstant().toEpochMilli(),
+            notificationMinutesBefore = -1L
+        )
+
+        val result = RecurringEventGenerator.generate(
+            baseEvent = base,
+            repeatType = EventRepeatType.DAILY,
+            repeatUntil = firstDay.plusDays(2),
+            repeatDays = emptySet(),
+            zoneId = tokyo
+        )
+
+        assertEquals(3, result.size)
+        result.forEachIndexed { index, event ->
+            val date = firstDay.plusDays(index.toLong())
+            assertEquals(date.atTime(23, 30).atZone(tokyo).toInstant().toEpochMilli(), event.startTime)
+            assertEquals(date.plusDays(1).atTime(1, 0).atZone(tokyo).toInstant().toEpochMilli(), event.endTime)
+        }
+    }
+
     private fun createEvent(
         date: LocalDate,
         id: Long = 0L,
