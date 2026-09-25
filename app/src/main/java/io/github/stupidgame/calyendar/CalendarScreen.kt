@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.stupidgame.calyendar.data.CalendarUiState
 import io.github.stupidgame.calyendar.data.CalendarViewModel
+import io.github.stupidgame.calyendar.data.TransactionType
 import io.github.stupidgame.calyendar.ui.components.DayCell
 import io.github.stupidgame.calyendar.ui.components.MonthlyGoalCard
 import java.time.DayOfWeek
@@ -53,6 +54,9 @@ fun CalendarScreen(viewModel: CalendarViewModel, year: Int, month: Int, onDayCli
 private fun MonthOverview(uiState: CalendarUiState) {
     val eventCount = uiState.dayStates.values.sumOf { it.events.size + it.icalEvents.size }
     val transactionCount = uiState.dayStates.values.sumOf { it.transactions.size }
+    val transactions = uiState.dayStates.values.flatMap { it.transactions }
+    val income = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+    val expense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
@@ -65,6 +69,13 @@ private fun MonthOverview(uiState: CalendarUiState) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (transactionCount > 0) {
+            Text(
+                text = "収入 %,d 円  ·  支出 %,d 円".format(income, expense),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -87,7 +98,7 @@ private fun CalendarGrid(uiState: CalendarUiState, onDayClick: (Int) -> Unit) {
                         val day = week * 7 + weekday - leadingDays + 1
                         val state = uiState.dayStates[day]
                         if (state == null) {
-                            Box(modifier = Modifier.weight(1f).height(68.dp))
+                            Box(modifier = Modifier.weight(1f).height(104.dp))
                         } else {
                             DayCell(
                                 dayState = state,

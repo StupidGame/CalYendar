@@ -1,39 +1,23 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:1" />
+    <linearGradient id="tile" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#176B75"/>
+      <stop offset="1" stop-color="#0D4651"/>
     </linearGradient>
-    <linearGradient id="coinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#f6d365;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#fda085;stop-opacity:1" />
+    <linearGradient id="coin" x1="184" y1="215" x2="332" y2="370" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE08A"/>
+      <stop offset="1" stop-color="#EAA52E"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="15"/>
-      <feOffset dx="5" dy="10" result="offsetblur"/>
-      <feComponentTransfer>
-        <feFuncA type="linear" slope="0.3"/>
-      </feComponentTransfer>
-      <feMerge> 
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/> 
-      </feMerge>
-    </filter>
   </defs>
 
-  <!-- Calendar Body -->
-  <rect x="56" y="56" width="400" height="400" rx="60" ry="60" fill="url(#bgGradient)" filter="url(#shadow)" />
-  
-  <!-- Calendar Header -->
-  <path d="M56 116 C 56 82.86 82.86 56 116 56 L 396 56 C 429.14 56 456 82.86 456 116 L 456 140 L 56 140 Z" fill="#ffffff" opacity="0.3" />
-
-  <!-- Coin -->
-  <circle cx="256" cy="286" r="100" fill="url(#coinGradient)" stroke="#ffffff" stroke-width="8" filter="url(#shadow)" />
-  
-  <!-- Yen Symbol -->
-  <text x="256" y="326" font-family="sans-serif" font-weight="bold" font-size="120" text-anchor="middle" fill="#ffffff">¥</text>
-
-  <!-- Calendar Rings -->
-  <circle cx="130" cy="80" r="15" fill="#ffffff" />
-  <circle cx="382" cy="80" r="15" fill="#ffffff" />
+  <rect id="background" width="512" height="512" rx="112" fill="url(#tile)"/>
+  <g id="mark">
+    <path d="M157 136H363C385 136 403 154 403 176V381C403 403 385 421 363 421H157C135 421 117 403 117 381V176C117 154 135 136 157 136Z" fill="#082F38" opacity=".24"/>
+    <path d="M153 128H359C380 128 397 145 397 166V375C397 396 380 413 359 413H153C132 413 115 396 115 375V166C115 145 132 128 153 128Z" fill="#F8FCFA"/>
+    <path d="M153 128H359C380 128 397 145 397 166V196H115V166C115 145 132 128 153 128Z" fill="#C85B52"/>
+    <path d="M181 112V151M331 112V151" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+    <circle cx="256" cy="294" r="88" fill="#D78F2D"/>
+    <circle cx="256" cy="289" r="81" fill="url(#coin)"/>
+    <path d="M224 252L256 289L288 252M256 289V340M226 301H286M226 318H286" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
 </svg>
