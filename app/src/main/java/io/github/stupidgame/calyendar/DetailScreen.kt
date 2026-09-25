@@ -19,7 +19,7 @@ import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -63,8 +63,6 @@ private data class DetailScreenDate(
     val month: Int,
     val day: Int
 ) {
-    val displayText: String = "$year/${month + 1}/$day"
-
     fun toGoal(name: String, amount: Long): FinancialGoal =
         FinancialGoal(
             id = 0,
@@ -101,6 +99,7 @@ private sealed interface DetailDeleteTarget {
     data class TransactionItem(val transaction: Transaction) : DetailDeleteTarget
     data class EventItem(val event: Event) : DetailDeleteTarget
     data class ImportedEventItem(val event: ImportedEvent) : DetailDeleteTarget
+    data object AllImportedEvents : DetailDeleteTarget
 }
 
 private data class DetailEventForm(
@@ -162,6 +161,11 @@ fun DetailScreen(
 
     deleteTarget?.let { target ->
         DeleteConfirmationDialog(
+            message = if (target == DetailDeleteTarget.AllImportedEvents) {
+                "読み込んだイベントをすべて削除します。よろしいですか？"
+            } else {
+                "この項目を削除してもよろしいですか？"
+            },
             onDismiss = { deleteTarget = null },
             onConfirm = {
                 viewModel.deleteTarget(target)
@@ -172,13 +176,14 @@ fun DetailScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { showActionSheet = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "追加")
-            }
+            ExtendedFloatingActionButton(
+                onClick = { showActionSheet = true },
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("追加") }
+            )
         }
     ) { innerPadding ->
         DetailScreenContent(
-            selectedDate = selectedDate,
             uiState = uiState,
             contentPadding =
                 PaddingValues(
@@ -204,7 +209,7 @@ fun DetailScreen(
                     showActionSheet = false
                 },
                 onClearImportedEvents = {
-                    viewModel.clearImportedEvents()
+                    deleteTarget = DetailDeleteTarget.AllImportedEvents
                     showActionSheet = false
                 }
             )
@@ -233,7 +238,6 @@ fun DetailScreen(
 
 @Composable
 private fun DetailScreenContent(
-    selectedDate: DetailScreenDate,
     uiState: DetailUiState,
     contentPadding: PaddingValues,
     onEditGoal: (FinancialGoal) -> Unit,
@@ -251,7 +255,6 @@ private fun DetailScreenContent(
     ) {
         item {
             DetailHeader(
-                selectedDate = selectedDate,
                 uiState = uiState,
                 onEditGoal = onEditGoal,
                 onDeleteGoal = onDeleteGoal
@@ -266,6 +269,10 @@ private fun DetailScreenContent(
             onDeleteImportedEvent = onDeleteImportedEvent
         )
 
+        if (uiState.events.isEmpty() && uiState.icalEvents.isEmpty()) {
+            item { Text("この日の予定はありません", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+
         transactionSection(
             transactions = uiState.dailyTransactions,
             onEditTransaction = onEditTransaction,
@@ -276,13 +283,12 @@ private fun DetailScreenContent(
 
 @Composable
 private fun DetailHeader(
-    selectedDate: DetailScreenDate,
     uiState: DetailUiState,
     onEditGoal: (FinancialGoal) -> Unit,
     onDeleteGoal: (FinancialGoal) -> Unit
 ) {
     Text(
-        text = selectedDate.displayText,
+        text = "この日の見通し",
         style = MaterialTheme.typography.headlineMedium,
         fontWeight = FontWeight.Bold
     )
@@ -347,11 +353,17 @@ private fun LazyListScope.transactionSection(
     onEditTransaction: (Transaction) -> Unit,
     onDeleteTransaction: (Transaction) -> Unit
 ) {
-    if (transactions.isEmpty()) return
+    if (transactions.isEmpty()) {
+        item {
+            DetailSectionTitle("収支")
+            Text("この日の収支はありません", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        return
+    }
 
     item {
         Spacer(modifier = Modifier.height(16.dp))
-        DetailSectionTitle("取引")
+        DetailSectionTitle("収支")
     }
     items(transactions, key = { "transaction-${it.id}" }) { transaction ->
         TransactionCard(
@@ -370,13 +382,14 @@ private fun DetailSectionTitle(text: String) {
 
 @Composable
 private fun DeleteConfirmationDialog(
+    message: String,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("削除の確認") },
-        text = { Text("この項目を削除してもよろしいですか？") },
+        text = { Text(message) },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text("削除") }
         },
@@ -587,6 +600,7 @@ private fun DetailViewModel.deleteTarget(target: DetailDeleteTarget) {
         is DetailDeleteTarget.TransactionItem -> deleteTransaction(target.transaction)
         is DetailDeleteTarget.EventItem -> deleteEvent(target.event)
         is DetailDeleteTarget.ImportedEventItem -> deleteImportedEvent(target.event)
+        DetailDeleteTarget.AllImportedEvents -> clearImportedEvents()
     }
 }
 
@@ -598,7 +612,8 @@ private fun DetailViewModel.saveEvent(
         event = form.toEvent(existingEvent),
         repeatType = form.repeatType,
         repeatUntil = form.repeatUntil,
-        repeatDays = form.repeatDays
+        repeatDays = form.repeatDays,
+        zoneId = form.zoneId
     )
 }
 

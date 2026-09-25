@@ -1,5 +1,7 @@
 package io.github.stupidgame.calyendar.data
 
+import java.time.LocalDate
+
 data class CsvBackupData(
     val settings: AppSettings,
     val events: List<Event>,
@@ -116,6 +118,7 @@ object CsvBackupCodec {
                         }
                 }
                 recordEvent -> {
+                    row.validateDate(index)
                     events +=
                         Event(
                             id = row[columnId].toLongValue("イベントID", index),
@@ -135,6 +138,7 @@ object CsvBackupCodec {
                         )
                 }
                 recordTransaction -> {
+                    row.validateDate(index)
                     transactions +=
                         Transaction(
                             id = row[columnId].toIntValue("取引ID", index),
@@ -148,6 +152,7 @@ object CsvBackupCodec {
                         )
                 }
                 recordGoal -> {
+                    row.validateDate(index)
                     goals +=
                         FinancialGoal(
                             id = row[columnId].toIntValue("目標ID", index),
@@ -386,6 +391,15 @@ object CsvBackupCodec {
         val month = toIntValue("月", rowIndex)
         require(month in 1..12) { "${rowIndex + 2}行目の月は1から12の間で指定してください。" }
         return month - 1
+    }
+
+    private fun List<String>.validateDate(rowIndex: Int) {
+        val year = this[columnYear].toIntValue("年", rowIndex)
+        val month = this[columnMonth].toMonthValue(rowIndex) + 1
+        val day = this[columnDay].toIntValue("日", rowIndex)
+        require(runCatching { LocalDate.of(year, month, day) }.isSuccess) {
+            "${rowIndex + 2}行目の日付が不正です。"
+        }
     }
 
     private fun String.toTransactionType(rowIndex: Int): TransactionType {

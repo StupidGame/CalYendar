@@ -68,6 +68,8 @@ class CalendarViewModel(private val repository: CalYendarRepository) : ViewModel
 
     fun loadMonth(year: Int, month: Int) {
         loadMonthJob?.cancel()
+        // Clear the previous month's days before navigation can use them with a new month.
+        _uiState.value = CalendarUiState(year = year, month = month)
         loadMonthJob =
             viewModelScope.launch {
                 val today = LocalDate.now()

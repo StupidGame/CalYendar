@@ -19,10 +19,8 @@ class EventNotificationManager(private val context: Context) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     fun scheduleEventNotification(event: Event) {
-        // Android 12 (API 31) 以降では権限チェックが必要
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-            return
-        }
+        val canScheduleExactly = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            alarmManager.canScheduleExactAlarms()
         val notificationList =
             event.notificationLeadTimes().take(MAX_SCHEDULED_NOTIFICATIONS_PER_EVENT)
 
@@ -48,11 +46,19 @@ class EventNotificationManager(private val context: Context) {
             val notificationTime = event.startTime - (minutes * 60 * 1000)
 
             if (notificationTime > System.currentTimeMillis()) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    notificationTime,
-                    pendingIntent
-                )
+                if (canScheduleExactly) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        notificationTime,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        notificationTime,
+                        pendingIntent
+                    )
+                }
             }
         }
     }

@@ -3,6 +3,7 @@ package io.github.stupidgame.calyendar.data
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 enum class EventRepeatType(val label: String) {
@@ -32,8 +33,12 @@ object RecurringEventGenerator {
 
         val startTime =
             Instant.ofEpochMilli(baseEvent.startTime).atZone(zoneId).toLocalTime()
-        val endTime =
-            Instant.ofEpochMilli(baseEvent.endTime).atZone(zoneId).toLocalTime()
+        val endDateTime = Instant.ofEpochMilli(baseEvent.endTime).atZone(zoneId)
+        val endTime = endDateTime.toLocalTime()
+        val endDayOffset = ChronoUnit.DAYS.between(
+            Instant.ofEpochMilli(baseEvent.startTime).atZone(zoneId).toLocalDate(),
+            endDateTime.toLocalDate()
+        )
         val initialDayOfWeek = startDate.dayOfWeek
         val seriesId = baseEvent.seriesId ?: UUID.randomUUID().toString()
 
@@ -58,7 +63,7 @@ object RecurringEventGenerator {
                     startTime =
                         currentDate.atTime(startTime).atZone(zoneId).toInstant().toEpochMilli(),
                     endTime =
-                        currentDate.atTime(endTime).atZone(zoneId).toInstant().toEpochMilli(),
+                        currentDate.plusDays(endDayOffset).atTime(endTime).atZone(zoneId).toInstant().toEpochMilli(),
                     seriesId = seriesId
                 )
             }

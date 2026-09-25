@@ -93,8 +93,8 @@ private fun MoneyEntryDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String, amount: Long) -> Unit
 ) {
-    var name by remember(initialName) { mutableStateOf(initialName) }
-    var amount by remember(initialAmount) { mutableStateOf(initialAmount) }
+    var name by remember(initialName, initialAmount) { mutableStateOf(initialName) }
+    var amount by remember(initialName, initialAmount) { mutableStateOf(initialAmount) }
     val parsedAmount = amount.toLongOrNull()
 
     AlertDialog(
@@ -123,9 +123,9 @@ private fun MoneyEntryDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    parsedAmount?.let { onConfirm(name, it) }
+                    parsedAmount?.let { onConfirm(name.trim(), it) }
                 },
-                enabled = parsedAmount != null && name.isNotBlank()
+                enabled = parsedAmount != null && parsedAmount > 0L && name.isNotBlank()
             ) {
                 Text("保存")
             }
