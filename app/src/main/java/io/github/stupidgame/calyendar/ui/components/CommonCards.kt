@@ -119,44 +119,81 @@ fun IcalEventCard(event: ImportedEvent, onLongClick: () -> Unit) {
 
 @Composable
 fun MonthlyGoalCard(uiState: CalendarUiState) {
-    val goals = uiState.monthGoals.sortedWith(compareBy(FinancialGoal::day, FinancialGoal::id))
+    val goals = uiState.activeMonthGoals.sortedWith(compareBy(FinancialGoal::day, FinancialGoal::id))
     val nextGoal = uiState.spanningGoal
-    val available = when {
-        uiState.isCurrentMonth -> uiState.todayAvailableBalance
-        goals.isNotEmpty() -> uiState.availableMoneyAfterMonthGoals
-        else -> uiState.currentBalance
+    val difference = when {
+        goals.isNotEmpty() -> uiState.goalComparisonBalance - goals.sumOf(FinancialGoal::amount)
+        nextGoal != null -> uiState.spanningGoalBalance - (uiState.spanningGoalTargetAmount ?: nextGoal.amount)
+        else -> null
+    }
+    val cardColor = when {
+        difference == null -> MaterialTheme.colorScheme.surface
+        difference < 0L -> MaterialTheme.colorScheme.errorContainer
+        else -> MaterialTheme.colorScheme.primaryContainer
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("お金と目標", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            if (goals.isEmpty() && nextGoal == null) {
-                Text(
-                    if (uiState.hasTransactions) "今月の目標はありません" else "予定や収支を追加して、この月の見通しを作りましょう",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                goals.forEach { goal -> GoalRow(goal) }
-                if (goals.isEmpty() && nextGoal != null) {
-                    Text("次の目標", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            when {
+                goals.isNotEmpty() -> {
+                    Text("今月の目標", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    goals.forEach { GoalRow(it) }
+                    val target = goals.sumOf(FinancialGoal::amount)
+                    AmountRow("目標合計", target)
+                    AmountRow("最後の目標までの残高", uiState.currentBalance)
+                    AmountRow("差額", difference ?: 0L, emphasized = true)
+                }
+                nextGoal != null -> {
+                    Text("次の目標", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     GoalRow(nextGoal)
+                    val target = uiState.spanningGoalTargetAmount ?: nextGoal.amount
+                    AmountRow("目標合計", target)
+                    AmountRow(if (uiState.isCurrentMonth) "現在残高" else "月末時点での残高", uiState.spanningGoalBalance)
+                    AmountRow("差額", difference ?: 0L, emphasized = true)
+                }
+                uiState.monthGoals.isNotEmpty() -> {
+                    Text("今月の目標はすべて達成しました", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    AmountRow(
+                        if (uiState.isPastMonth) "最終的に残ったお金" else "現時点で使えるお金",
+                        if (uiState.isCurrentMonth) uiState.todayAvailableBalance else uiState.availableMoneyAfterMonthGoals,
+                        emphasized = true
+                    )
+                }
+                else -> {
+                    Text("お金と目標", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    if (uiState.hasTransactions) {
+                        AmountRow(
+                            if (uiState.isPastMonth) "最終的に残ったお金" else if (uiState.isCurrentMonth) "現在の残高" else "月末時点での残高",
+                            if (uiState.isCurrentMonth) uiState.todayBalance else uiState.currentBalance,
+                            emphasized = true
+                        )
+                    } else {
+                        Text(
+                            "予定や収支を追加して、この月の見通しを作りましょう",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(
-                    if (uiState.isCurrentMonth) "現在使える金額" else "月の見通し",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text("%,d 円".format(available), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            }
         }
+    }
+}
+
+@Composable
+private fun AmountRow(label: String, amount: Long, emphasized: Boolean = false) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Normal)
+        Text(
+            "%,d 円".format(amount),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Medium,
+            color = if (emphasized && amount < 0L) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -174,18 +211,19 @@ private fun GoalRow(goal: FinancialGoal) {
 
 @Composable
 fun CurrentBalanceCard(balance: Long, modifier: Modifier = Modifier) {
+    val positive = balance >= 0L
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        colors = CardDefaults.cardColors(containerColor = if (positive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer)
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("この日時点で使える金額", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text("その日時点の所持金", style = MaterialTheme.typography.bodyMedium, color = if (positive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer)
             Text(
                 "%,d 円".format(balance),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = if (positive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
             )
         }
     }
