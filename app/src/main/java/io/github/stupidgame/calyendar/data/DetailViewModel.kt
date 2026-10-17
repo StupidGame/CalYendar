@@ -38,11 +38,10 @@ class DetailViewModel(
             repository.getTransactionsForDate(year, month, day),
             repository.getImportedEvents()
         ) { allTransactions, allGoals, dailyEvents, dailyTransactions, importedEvents ->
-            val rawCurrentBalance = FinancialCalculator.calculateDailyBalance(allTransactions)
             val today = LocalDate.now()
             val currentProjection =
                 FinancialCalculator.calculateGoalProjection(
-                    rawBalance = rawCurrentBalance,
+                    transactions = allTransactions,
                     allGoals = allGoals,
                     currentDate = currentDate,
                     goalWindowStartDate = today
@@ -50,7 +49,7 @@ class DetailViewModel(
             val predictionDate = if (currentDate.isBefore(today)) today else currentDate
             val predictionProjection =
                 FinancialCalculator.calculateGoalProjection(
-                    rawBalance = rawCurrentBalance,
+                    transactions = allTransactions,
                     allGoals = allGoals,
                     currentDate = predictionDate,
                     goalWindowStartDate = today

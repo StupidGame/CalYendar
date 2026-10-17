@@ -5,95 +5,43 @@
     android:height="108dp"
     android:viewportWidth="512"
     android:viewportHeight="512">
-
-    <!-- Drop Shadow for Calendar (Fake) -->
     <path
-        android:pathData="M70,140h372v280h-372z"
-        android:fillColor="#20000000"/>
-
-    <!-- Calendar Body Main -->
+        android:pathData="M157,136H363C385,136 403,154 403,176V381C403,403 385,421 363,421H157C135,421 117,403 117,381V176C117,154 135,136 157,136Z"
+        android:fillColor="#FF082F38"
+        android:fillAlpha="0.24" />
     <path
-        android:pathData="M56,116 C56,82.86 82.86,56 116,56 L396,56 C429.14,56 456,82.86 456,116 L456,420 C456,453 429,480 396,480 L116,480 C83,480 56,453 56,420 Z">
+        android:pathData="M153,128H359C380,128 397,145 397,166V375C397,396 380,413 359,413H153C132,413 115,396 115,375V166C115,145 132,128 153,128Z"
+        android:fillColor="#FFF8FCFA" />
+    <path
+        android:pathData="M153,128H359C380,128 397,145 397,166V196H115V166C115,145 132,128 153,128Z"
+        android:fillColor="#FFC85B52" />
+    <path
+        android:pathData="M181,112V151M331,112V151"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="18"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M344,294A88,88 0,1 1,168 294A88,88 0,1 1,344 294Z"
+        android:fillColor="#FFD78F2D" />
+    <path android:pathData="M337,289A81,81 0,1 1,175 289A81,81 0,1 1,337 289Z">
         <aapt:attr name="android:fillColor">
             <gradient
-                android:startX="256"
-                android:startY="56"
-                android:endX="256"
-                android:endY="480"
+                android:startX="184"
+                android:startY="215"
+                android:endX="332"
+                android:endY="370"
                 android:type="linear">
-                <item android:offset="0.0" android:color="#FFFFFFFF"/>
-                <item android:offset="1.0" android:color="#FFE0E0E0"/>
+                <item android:offset="0" android:color="#FFFFE08A" />
+                <item android:offset="1" android:color="#FFEAA52E" />
             </gradient>
         </aapt:attr>
     </path>
-
-    <!-- Calendar Header (Red/Pink Gradient) -->
     <path
-        android:pathData="M56,116 C56,82.86 82.86,56 116,56 L396,56 C429.14,56 456,82.86 456,116 L456,140 L56,140 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="56"
-                android:startY="56"
-                android:endX="456"
-                android:endY="140"
-                android:type="linear">
-                <item android:offset="0.0" android:color="#FFFF758C"/>
-                <item android:offset="1.0" android:color="#FFFF7EB3"/>
-            </gradient>
-        </aapt:attr>
-    </path>
-
-    <!-- Ring Holes -->
-    <path
-        android:fillColor="#FFDDDDDD"
-        android:pathData="M130,70 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
-    <path
-        android:fillColor="#FFDDDDDD"
-        android:pathData="M382,70 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" />
-
-    <!-- Coin Shadow -->
-    <path
-        android:pathData="M360,290A100,100 0 1,1 160,290A100,100 0 1,1 360,290Z"
-        android:fillColor="#20000000"
-        android:translateX="4"
-        android:translateY="4"/>
-
-    <!-- Coin Body (Gold Gradient) -->
-    <path
-        android:pathData="M356,286A100,100 0 1,1 156,286A100,100 0 1,1 356,286Z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:centerX="230"
-                android:centerY="250"
-                android:gradientRadius="140"
-                android:type="radial">
-                <item android:offset="0.0" android:color="#FFFFE082"/> <!-- Light Gold -->
-                <item android:offset="0.7" android:color="#FFFFA000"/> <!-- Orange Gold -->
-                <item android:offset="1.0" android:color="#FFFF6F00"/> <!-- Dark Orange -->
-            </gradient>
-        </aapt:attr>
-    </path>
-
-    <!-- Coin Rim Highlight -->
-    <path
-        android:pathData="M346,286A90,90 0 1,1 166,286A90,90 0 1,1 346,286Z"
-        android:strokeWidth="4"
-        android:strokeColor="#FFFFFF80"/> <!-- Semi-transparent white ring -->
-
-    <!-- Yen Symbol -->
-    <path
-        android:pathData="M226,216 L256,256 L286,216 L306,216 L266,266 L266,286 L306,286 L306,301 L266,301 L266,316 L306,316 L306,331 L266,331 L266,376 L246,376 L246,331 L206,331 L206,316 L246,316 L246,301 L206,301 L206,286 L246,286 L246,266 L206,216 Z">
-         <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="226"
-                android:startY="216"
-                android:endX="306"
-                android:endY="376"
-                android:type="linear">
-                <item android:offset="0.0" android:color="#FFFDD835"/>
-                <item android:offset="1.0" android:color="#FFFFF9C4"/>
-            </gradient>
-        </aapt:attr>
-    </path>
-    
+        android:pathData="M224,252L256,289L288,252M256,289V340M226,301H286M226,318H286"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="16"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
 </vector>

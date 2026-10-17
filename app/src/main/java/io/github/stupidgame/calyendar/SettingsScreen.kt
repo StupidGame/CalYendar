@@ -129,6 +129,7 @@ fun SettingsScreen(calendarViewModel: CalendarViewModel, settingsViewModel: Sett
 
         SettingsSection(title = "バックアップ", icon = { Icon(Icons.Outlined.Save, null) }) {
             Text(stringResource(R.string.settings_backup_description), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.settings_backup_warning), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = { exportBackup.launch(backupFileName) }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.settings_export_backup))
             }
