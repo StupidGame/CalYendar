@@ -14,6 +14,91 @@ class CalendarMonthUiStateFactoryTest {
     private val zoneId = ZoneId.systemDefault()
 
     @Test
+    fun `daily cells and month summaries discard earlier daily deficits`() {
+        val transactions =
+            listOf(
+                transaction(LocalDate.of(2026, 3, 1), TransactionType.INCOME, 1_000),
+                transaction(LocalDate.of(2026, 3, 2), TransactionType.EXPENSE, 1_500),
+                transaction(LocalDate.of(2026, 3, 3), TransactionType.EXPENSE, 200),
+                transaction(LocalDate.of(2026, 3, 4), TransactionType.INCOME, 300)
+            )
+        val state =
+            CalendarMonthUiStateFactory.create(
+                CalendarMonthUiStateInput(
+                    year = 2026,
+                    month = 2,
+                    today = LocalDate.of(2026, 3, 4),
+                    transactionsUpToToday = transactions,
+                    transactionsBeforeMonth = emptyList(),
+                    monthTransactions = transactions,
+                    monthEvents = emptyList(),
+                    allGoals = listOf(goal(LocalDate.of(2026, 3, 10), 100)),
+                    importedEvents = emptyList()
+                )
+            )
+
+        assertEquals(1_000L, state.dayStates.getValue(1).balance)
+        assertEquals(0L, state.dayStates.getValue(2).balance)
+        assertEquals(0L, state.dayStates.getValue(3).balance)
+        assertEquals(300L, state.dayStates.getValue(4).balance)
+        assertEquals(200L, state.dayStates.getValue(31).balance)
+        assertEquals(300L, state.todayBalance)
+        assertEquals(200L, state.todayAvailableBalance)
+        assertEquals(300L, state.currentBalance)
+        assertEquals(200L, state.availableMoneyAfterMonthGoals)
+    }
+
+    @Test
+    fun `month opening and spanning goal balance discard previous month deficits`() {
+        val previousTransactions =
+            listOf(
+                transaction(LocalDate.of(2026, 2, 27), TransactionType.INCOME, 500),
+                transaction(LocalDate.of(2026, 2, 28), TransactionType.EXPENSE, 800)
+            )
+        val monthTransactions =
+            listOf(transaction(LocalDate.of(2026, 3, 2), TransactionType.INCOME, 200))
+        val state =
+            CalendarMonthUiStateFactory.create(
+                CalendarMonthUiStateInput(
+                    year = 2026,
+                    month = 2,
+                    today = LocalDate.of(2026, 3, 2),
+                    transactionsUpToToday = previousTransactions + monthTransactions,
+                    transactionsBeforeMonth = previousTransactions,
+                    monthTransactions = monthTransactions,
+                    monthEvents = emptyList(),
+                    allGoals = listOf(goal(LocalDate.of(2026, 4, 5), 100)),
+                    importedEvents = emptyList()
+                )
+            )
+
+        assertEquals(0L, state.dayStates.getValue(1).balance)
+        assertEquals(200L, state.dayStates.getValue(2).balance)
+        assertEquals(200L, state.todayBalance)
+        assertEquals(200L, state.currentBalance)
+        assertEquals(200L, state.spanningGoalBalance)
+        assertEquals(100L, state.todayAvailableBalance)
+
+        val futureState =
+            CalendarMonthUiStateFactory.create(
+                CalendarMonthUiStateInput(
+                    year = 2026,
+                    month = 2,
+                    today = LocalDate.of(2026, 2, 28),
+                    transactionsUpToToday = previousTransactions,
+                    transactionsBeforeMonth = previousTransactions,
+                    monthTransactions = monthTransactions,
+                    monthEvents = emptyList(),
+                    allGoals = listOf(goal(LocalDate.of(2026, 4, 5), 100)),
+                    importedEvents = emptyList()
+                )
+            )
+
+        assertEquals(0L, futureState.todayBalance)
+        assertEquals(200L, futureState.spanningGoalBalance)
+    }
+
+    @Test
     fun `builds day states with grouped holidays and running balances`() {
         val input =
             CalendarMonthUiStateInput(
@@ -37,7 +122,7 @@ class CalendarMonthUiStateFactoryTest {
                 monthEvents = listOf(event(LocalDate.of(2026, 3, 2), isHoliday = true)),
                 allGoals =
                     listOf(
-                        goal(LocalDate.of(2026, 2, 20), amount = 30),
+                        goal(LocalDate.of(2026, 2, 28), amount = 30),
                         goal(LocalDate.of(2026, 3, 4), amount = 60)
                     ),
                 importedEvents = listOf(importedEvent(LocalDate.of(2026, 3, 1), isHoliday = true))
@@ -113,7 +198,7 @@ class CalendarMonthUiStateFactoryTest {
                 monthEvents = emptyList(),
                 allGoals =
                     listOf(
-                        goal(LocalDate.of(2026, 2, 20), amount = 30),
+                        goal(LocalDate.of(2026, 2, 28), amount = 30),
                         goal(LocalDate.of(2026, 3, 10), amount = 20),
                         goal(LocalDate.of(2026, 3, 25), amount = 60)
                     ),
@@ -358,7 +443,7 @@ class CalendarMonthUiStateFactoryTest {
     }
 
     @Test
-    fun `cell display subtracts paid goals across month boundaries`() {
+    fun `does not carry an unfunded goal across month boundaries`() {
         val input =
             CalendarMonthUiStateInput(
                 year = 2026,
@@ -382,7 +467,8 @@ class CalendarMonthUiStateFactoryTest {
         val dayCell = state.dayStates.getValue(5)
 
         assertEquals("goal-10", dayCell.goal?.name)
-        assertEquals(-70L, dayCell.predictionDiff)
+        assertEquals(250L, dayCell.balance)
+        assertEquals(50L, dayCell.predictionDiff)
         assertEquals(200L, dayCell.goalTargetAmount)
     }
 

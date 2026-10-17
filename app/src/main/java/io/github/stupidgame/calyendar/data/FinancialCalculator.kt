@@ -13,7 +13,7 @@ object FinancialCalculator {
     )
 
     fun calculateGoalProjection(
-        rawBalance: Long,
+        transactions: List<Transaction>,
         allGoals: List<FinancialGoal>,
         currentDate: LocalDate,
         goalWindowStartDate: LocalDate = currentDate
@@ -21,11 +21,14 @@ object FinancialCalculator {
         val allSortedGoals = allGoals.sortedByDateThenId()
         val visibleGoals =
             allSortedGoals.filter { goal -> !goal.toLocalDate().isBefore(goalWindowStartDate) }
-        val reachedGoalCost =
-            allSortedGoals
-                .filter { goal -> goal.toLocalDate().isBefore(currentDate) }
-                .sumOf(FinancialGoal::amount)
-        val currentBalance = (rawBalance - reachedGoalCost).coerceAtLeast(0L)
+        val reachedGoals =
+            allSortedGoals.filter { goal -> goal.toLocalDate().isBefore(currentDate) }
+        val reachedGoalCost = reachedGoals.sumOf(FinancialGoal::amount)
+        val currentBalance =
+            calculateBalance(
+                transactions.filter { !it.toLocalDate().isAfter(currentDate) },
+                reachedGoals
+            )
         val upcomingGoal =
             visibleGoals.firstOrNull { goal -> !goal.toLocalDate().isBefore(currentDate) }
         val goalTargetAmount =
@@ -41,6 +44,25 @@ object FinancialCalculator {
             predictionDiff = predictionDiff,
             reachedGoalCost = reachedGoalCost
         )
+    }
+
+    fun calculateBalance(
+        transactions: List<Transaction>,
+        paidGoals: List<FinancialGoal> = emptyList()
+    ): Long {
+        val dailyChanges = sortedMapOf<LocalDate, Long>()
+        transactions.groupBy(Transaction::toLocalDate).forEach { (date, dailyTransactions) ->
+            dailyChanges[date] = calculateDailyBalance(dailyTransactions)
+        }
+        paidGoals.forEach { goal ->
+            val date = goal.toLocalDate()
+            dailyChanges[date] = (dailyChanges[date] ?: 0L) - goal.amount
+        }
+
+        // Settle each day's total before carrying its balance into the next day.
+        return dailyChanges.values.fold(0L) { balance, change ->
+            (balance + change).coerceAtLeast(0L)
+        }
     }
 
     fun calculateDailyBalance(transactions: List<Transaction>): Long {

@@ -5,6 +5,8 @@ import java.time.ZoneId
 
 fun Event.toLocalDate(): LocalDate = LocalDate.of(year, month + 1, day)
 
+fun Transaction.toLocalDate(): LocalDate = LocalDate.of(year, month + 1, day)
+
 fun FinancialGoal.toLocalDate(): LocalDate = LocalDate.of(year, month + 1, day)
 
 fun ImportedEvent.toStartLocalDate(zoneId: ZoneId = ZoneId.systemDefault()): LocalDate? =

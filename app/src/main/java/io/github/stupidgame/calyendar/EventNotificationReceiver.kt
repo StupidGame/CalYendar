@@ -14,7 +14,7 @@ class EventNotificationReceiver : BroadcastReceiver() {
         val eventId = intent.getIntExtra(NotificationConstants.EXTRA_EVENT_ID, 0)
 
         val notification = NotificationCompat.Builder(context, NotificationConstants.CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(eventTitle)
             .setContentText(context.getString(R.string.notification_content_upcoming))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

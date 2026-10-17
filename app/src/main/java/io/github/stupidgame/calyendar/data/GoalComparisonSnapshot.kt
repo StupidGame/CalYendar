@@ -16,11 +16,9 @@ object GoalComparisonSnapshotCalculator {
         allGoals: List<FinancialGoal>,
         currentDate: LocalDate
     ): GoalComparisonSnapshot {
-        val rawCurrentBalance =
-            FinancialCalculator.calculateDailyBalance(transactionsUpToCurrentDate)
         val projection =
             FinancialCalculator.calculateGoalProjection(
-                rawBalance = rawCurrentBalance,
+                transactions = transactionsUpToCurrentDate,
                 allGoals = allGoals,
                 currentDate = currentDate,
                 goalWindowStartDate = currentDate
