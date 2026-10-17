@@ -584,13 +584,14 @@ val updated = oldEvent.copy(title = "新しいタイトル")
 - 金額計算の純粋関数群です。
 - `calculateDailyBalance(transactions)`
   - 収入を足し、支出を引きます
-- `calculateBalanceAfterCompletedGoals(...)`
-  - 指定日以前の目標金額を現在残高から差し引きます
-- `calculatePrediction(...)`
-  - 今後最初の目標を探します
-  - その目標より前の目標合計を求めます
-  - `currentBalance - totalPriorGoalCost` を比較用残高として返します
-- `PredictionResult` には差額、次目標、累積目標コストが入ります。
+- `calculateBalance(transactions, paidGoals)`
+  - 収支と支払済み目標を日付ごとにまとめ、古い日から順に残高へ反映します
+  - 各日の計算後に残高を0円以上にし、不足分を翌日へ繰り越しません
+- `calculateGoalProjection(...)`
+  - 指定日までの取引と、指定日より前の目標から日ごとの残高を計算します
+  - 目標はその当日には残高から引かず、翌日以降の残高に反映します
+  - 今後最初の目標日を探し、同日の目標額合計と残高を比較します
+- `GoalProjection` には残高、差額、次目標、累積目標コストが入ります。目標との差額は不足額を示すためマイナスになることがあります。
 
 #### `data/GoalComparisonSnapshot.kt`
 
@@ -605,7 +606,7 @@ val updated = oldEvent.copy(title = "新しいタイトル")
   - 取引を日ごとにグループ化
   - イベントを日ごとにグループ化
   - 外部イベントを `LocalDate` 単位でグループ化
-  - 月初以前の残高から日ごとの running balance を作る
+  - 月初以前の取引も含め、日ごとの不足分を繰り越さずに残高を作る
   - 各日について目標予測差分を出す
   - 月末までの総残高、当月目標、使用可能額を算出する
 - `shouldDisplayGoal()` は「今日以降かつ目標日以前」の日にだけ目標を見せる制御です。
