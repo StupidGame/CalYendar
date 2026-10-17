@@ -49,6 +49,14 @@ fun DetailGoalSummaryCard(
             }
 
             val target = goalTargetAmount ?: goals.sumOf(FinancialGoal::amount)
+            val firstDeadline = goals.minWithOrNull(compareBy(FinancialGoal::year, FinancialGoal::month, FinancialGoal::day))
+            if (firstDeadline != null) {
+                Text(
+                    "次の期限: ${firstDeadline.year}年${firstDeadline.month + 1}月${firstDeadline.day}日",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             goals.forEach { goal ->
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -60,7 +68,7 @@ fun DetailGoalSummaryCard(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            "${goal.month + 1}月${goal.day}日 · %,d 円".format(goal.amount),
+                            "${goal.year}年${goal.month + 1}月${goal.day}日 · %,d 円".format(goal.amount),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -74,15 +82,15 @@ fun DetailGoalSummaryCard(
                 }
             }
 
-            val progress = if (target > 0L) (displayBalance.toFloat() / target).coerceIn(0f, 1f) else 1f
-            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+            val achievementRate = if (target > 0L) displayBalance.toDouble() / target else if (displayBalance >= 0L) 1.0 else 0.0
+            LinearProgressIndicator(progress = { achievementRate.toFloat().coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("目標合計 %,d 円".format(target), style = MaterialTheme.typography.bodyMedium)
-                Text("達成率 %.0f%%".format(progress * 100), style = MaterialTheme.typography.bodyMedium)
+                Text("達成率 %.0f%%".format(achievementRate * 100), style = MaterialTheme.typography.bodyMedium)
             }
             val difference = displayBalance - target
             Text(
-                if (difference >= 0L) "達成後の余裕 %,d 円".format(difference) else "達成まであと %,d 円".format(-difference),
+                if (difference >= 0L) "目標達成後の残り: %,d 円".format(difference) else "目標達成まであと %,d 円足りません".format(-difference),
                 color = if (difference >= 0L) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
