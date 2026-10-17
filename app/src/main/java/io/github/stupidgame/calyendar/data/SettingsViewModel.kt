@@ -103,7 +103,7 @@ private fun AppSettings.toUiState(): SettingsUiState {
 }
 
 private fun BackupSummary.toExportMessage(): String =
-    "Backup exported: $events events, $transactions transactions, $goals goals."
+    "バックアップを書き出しました（予定${events}件、収支${transactions}件、目標${goals}件）。"
 
 private fun BackupSummary.toImportMessage(): String =
-    "Backup imported: $events events, $transactions transactions, $goals goals."
+    "バックアップを読み込みました（予定${events}件、収支${transactions}件、目標${goals}件）。"

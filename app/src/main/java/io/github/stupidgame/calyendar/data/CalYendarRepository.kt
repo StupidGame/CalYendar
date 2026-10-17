@@ -142,8 +142,10 @@ class CalYendarRepository(
                             ImportedEvent(event = vEvent, isHoliday = true)
                         }.toList()
 
-                    dao.deleteHolidays()
-                    dao.upsertImportedEvents(holidays)
+                    database.withTransaction {
+                        dao.deleteHolidays()
+                        dao.upsertImportedEvents(holidays)
+                    }
                 }
             } catch (exception: Exception) {
                 Log.e("CalYendar", "Failed to fetch holidays", exception)
@@ -195,14 +197,16 @@ class CalYendarRepository(
 
     private suspend fun replaceMatchingImportedEvents(incomingEvents: List<ImportedEvent>) {
         val deduplicatedIncomingEvents = incomingEvents.distinctBy(ImportedEvent::identityKey)
-        val existingEventsToReplace =
-            importedEventsToReplace(dao.getImportedEventsSnapshot(), deduplicatedIncomingEvents)
+        database.withTransaction {
+            val existingEventsToReplace =
+                importedEventsToReplace(dao.getImportedEventsSnapshot(), deduplicatedIncomingEvents)
 
-        if (existingEventsToReplace.isNotEmpty()) {
-            dao.deleteImportedEvents(existingEventsToReplace)
-        }
-        if (deduplicatedIncomingEvents.isNotEmpty()) {
-            dao.upsertImportedEvents(deduplicatedIncomingEvents)
+            if (existingEventsToReplace.isNotEmpty()) {
+                dao.deleteImportedEvents(existingEventsToReplace)
+            }
+            if (deduplicatedIncomingEvents.isNotEmpty()) {
+                dao.upsertImportedEvents(deduplicatedIncomingEvents)
+            }
         }
     }
 }

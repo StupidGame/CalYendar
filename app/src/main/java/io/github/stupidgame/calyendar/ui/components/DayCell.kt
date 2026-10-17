@@ -1,277 +1,105 @@
 package io.github.stupidgame.calyendar.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.stupidgame.calyendar.data.DayState
-import io.github.stupidgame.calyendar.data.TransactionType
-import java.util.Calendar
-import kotlin.math.abs
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.util.Locale
 
 @Composable
-fun DayCell(dayState: DayState, year: Int, month: Int, onClick: () -> Unit) {
-    val predictionDiff = dayState.predictionDiff
-    val goalTargetAmount = dayState.goalTargetAmount ?: dayState.goal?.amount
-    val comparisonBalance =
-        if (predictionDiff != null && goalTargetAmount != null) {
-            predictionDiff + goalTargetAmount
-        } else {
-            dayState.balance
-        }
+fun DayCell(
+    dayState: DayState,
+    year: Int,
+    month: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val date = LocalDate.of(year, month + 1, dayState.dayOfMonth)
+    val isToday = date == LocalDate.now()
+    val isGoalDay = dayState.goal?.let { it.year == year && it.month == month && it.day == date.dayOfMonth } == true
+    val eventCount = dayState.events.size + dayState.icalEvents.size
+    val contentColor = when {
+        dayState.isHoliday || date.dayOfWeek == DayOfWeek.SUNDAY -> MaterialTheme.colorScheme.error
+        date.dayOfWeek == DayOfWeek.SATURDAY -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    val description = buildString {
+        append("${month + 1}月${date.dayOfMonth}日")
+        if (isToday) append("、今日")
+        if (isGoalDay) append("、目標日")
+        if (eventCount > 0) append("、予定${eventCount}件")
+        if (dayState.transactions.isNotEmpty()) append("、収支${dayState.transactions.size}件")
+        append("、残高${dayState.balance}円")
+    }
 
-    val cardColor =
-        when {
-            predictionDiff != null && goalTargetAmount != null -> {
-                getGradientColor(comparisonBalance, goalTargetAmount)
-            }
-            else -> MaterialTheme.colorScheme.surface
-        }
-    val contentColor = if (cardColor.luminance() > 0.5f) Color.Black else Color.White
-
-    val calendar = Calendar.getInstance().apply { set(year, month, dayState.dayOfMonth) }
-    val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-
-    val dateTextColor =
-        when {
-            dayState.isHoliday || dayOfWeek == Calendar.SUNDAY -> Color(0xFFD32F2F)
-            dayOfWeek == Calendar.SATURDAY -> Color(0xFF1976D2)
-            else -> contentColor
-        }
-
-    val today = java.time.LocalDate.now()
-    val currentDayDate = java.time.LocalDate.of(year, month + 1, dayState.dayOfMonth)
-    val isToday = currentDayDate.isEqual(today)
-
-    Card(
-        modifier =
-            Modifier.padding(2.dp)
-                .aspectRatio(1f)
-                .let {
-                    if (isToday) {
-                        it.border(
-                            3.dp,
-                            MaterialTheme.colorScheme.primary,
-                            RoundedCornerShape(12.dp)
-                        )
-                    } else {
-                        it
-                    }
-                }
-                .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = cardColor),
-        shape = RoundedCornerShape(12.dp)
+    Surface(
+        modifier = modifier.height(68.dp).semantics { contentDescription = description }.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isToday) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        border = if (isToday) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Column(
-            modifier =
-                Modifier.fillMaxSize()
-                    .padding(start = 2.dp, end = 2.dp, bottom = 2.dp, top = 0.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(vertical = 5.dp, horizontal = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
+            Text(
+                text = dayState.dayOfMonth.toString(),
+                color = contentColor,
+                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Medium,
+                style = MaterialTheme.typography.labelLarge
+            )
+            Text(
+                text = when {
+                    isGoalDay -> "目標"
+                    dayState.transactions.isNotEmpty() -> compactYen(dayState.balance)
+                    else -> ""
+                },
+                color = if (isGoalDay) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 9.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 0.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = dayState.dayOfMonth.toString(),
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    fontSize = 12.sp,
-                    color = dateTextColor
+                    text = if (eventCount > 0) "●" else " ",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 9.sp,
+                    lineHeight = 10.sp
                 )
-
-                if (dayState.events.isNotEmpty() || dayState.icalEvents.isNotEmpty()) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(1.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        repeat(dayState.events.size) {
-                            Box(
-                                modifier =
-                                    Modifier.size(4.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.primary,
-                                            CircleShape
-                                        )
-                            )
-                        }
-                        repeat(dayState.icalEvents.size) {
-                            Box(modifier = Modifier.size(4.dp).background(Color.Cyan, CircleShape))
-                        }
-                    }
-                }
-            }
-
-            Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                Box(
-                    modifier = Modifier.weight(2f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val income =
-                        dayState.transactions
-                            .filter { it.type == TransactionType.INCOME }
-                            .sumOf { it.amount }
-                    val expense =
-                        dayState.transactions
-                            .filter { it.type == TransactionType.EXPENSE }
-                            .sumOf { it.amount }
-
-                    if (income > 0 || expense > 0) {
-                        val incomeExpenseText =
-                            buildAnnotatedString {
-                                if (income > 0) {
-                                    withStyle(style = SpanStyle(color = Color(0xFF2E7D32))) {
-                                        append("収+%,d".format(income))
-                                    }
-                                }
-                                if (income > 0 && expense > 0) {
-                                    append("\n")
-                                }
-                                if (expense > 0) {
-                                    withStyle(style = SpanStyle(color = Color(0xFFC62828))) {
-                                        append("支-%,d".format(expense))
-                                    }
-                                }
-                            }
-                        AutoSizeAnnotatedText(text = incomeExpenseText)
-                    }
-                }
-
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (predictionDiff != null && goalTargetAmount != null) {
-                        val prefix = if (predictionDiff >= 0) "余" else "不"
-                        val predictionTextColor =
-                            if (predictionDiff >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
-                        AutoSizeText(
-                            text = "%s: %,d".format(prefix, abs(predictionDiff)),
-                            color = predictionTextColor,
-                            maxLines = 1
-                        )
-                    } else if (goalTargetAmount != null) {
-                        // 目標当日のセルにも、目標以前の日のセルと同様に達成状態を表示する。
-                        // 可能なら predictionDiff を使し、なければ現在残高と目標の差を表示する。
-                        val diff = if (predictionDiff != null) predictionDiff else (dayState.balance - goalTargetAmount)
-                        val prefix = if (diff >= 0) "余" else "不"
-                        val diffColor = if (diff >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
-
-                        val annotated = buildAnnotatedString {
-                            append("目標: %,d\n".format(goalTargetAmount))
-                            withStyle(style = SpanStyle(color = diffColor)) {
-                                append("%s: %,d".format(prefix, abs(diff)))
-                            }
-                        }
-
-                        AutoSizeAnnotatedText(text = annotated)
-                    }
+                if (dayState.predictionDiff?.let { it < 0L } == true) {
+                    Text("•", color = MaterialTheme.colorScheme.error, fontSize = 9.sp, lineHeight = 10.sp)
                 }
             }
         }
     }
 }
 
-fun getGradientColor(numerator: Long, denominator: Long): Color {
-    if (denominator <= 0L) {
-        return if (numerator >= 0) Color(0xFFA5D6A7) else Color(0xFFEF9A9A)
-    }
-    val achievementRate = numerator.toFloat() / denominator.toFloat()
-    return when {
-        achievementRate < 0f -> Color(0xFFEF9A9A)
-        achievementRate < 1f -> Color(0xFFFFF9C4)
-        else -> Color(0xFFA5D6A7)
-    }
-}
-
-@Composable
-fun AutoSizeAnnotatedText(
-    text: AnnotatedString,
-    modifier: Modifier = Modifier,
-    maxLines: Int = 2,
-) {
-    var fontSize by remember(text) { mutableStateOf(if (text.text.lines().size > 1) 6.sp else 8.sp) }
-    var readyToDraw by remember(text) { mutableStateOf(false) }
-
-    Text(
-        text = text,
-        modifier = modifier.drawWithContent { if (readyToDraw) drawContent() },
-        maxLines = maxLines,
-        fontSize = fontSize,
-        lineHeight = (fontSize.value * 1.0f).sp,
-        textAlign = TextAlign.Center,
-        onTextLayout = { textLayoutResult ->
-            if (textLayoutResult.hasVisualOverflow) {
-                fontSize = (fontSize.value * 0.9f).sp
-            } else if (!readyToDraw) {
-                fontSize = (fontSize.value * 1.0f).sp
-                readyToDraw = true
-            }
-        }
-    )
-}
-
-@Composable
-fun AutoSizeText(
-    text: String,
-    modifier: Modifier = Modifier,
-    color: Color = Color.Unspecified,
-    maxLines: Int = 1,
-) {
-    var fontSize by remember(text) { mutableStateOf(7.sp) }
-    var readyToDraw by remember(text) { mutableStateOf(false) }
-
-    Text(
-        text = text,
-        modifier = modifier.drawWithContent { if (readyToDraw) drawContent() },
-        color = color,
-        maxLines = maxLines,
-        fontSize = fontSize,
-        lineHeight = (fontSize.value * 1.1f).sp,
-        textAlign = TextAlign.Center,
-        onTextLayout = { textLayoutResult ->
-            if (textLayoutResult.hasVisualOverflow) {
-                fontSize = (fontSize.value * 0.9f).sp
-            } else if (!readyToDraw) {
-                fontSize = (fontSize.value * 0.9f).sp
-                readyToDraw = true
-            }
-        }
-    )
+private fun compactYen(amount: Long): String = when {
+    amount in -9_999L..9_999L -> String.format(Locale.JAPAN, "%,d", amount)
+    else -> String.format(Locale.JAPAN, "%.1f万", amount / 10_000.0)
 }

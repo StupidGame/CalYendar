@@ -101,7 +101,7 @@ class DetailViewModelTest {
 
         val result = calculateDetailGoalTargetAmount(listOf(firstGoal, secondGoal))
 
-        assertEquals(15_000, result)
+        assertEquals(15_000L, result)
     }
 
     private fun goal(

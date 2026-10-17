@@ -1,9 +1,27 @@
 package io.github.stupidgame.calyendar.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class CsvBackupCodecTest {
+
+    @Test
+    fun `rejects impossible dates before replacing saved data`() {
+        val valid = CsvBackupCodec.encode(
+            CsvBackupData(
+                settings = AppSettings(),
+                events = emptyList(),
+                transactions = listOf(Transaction(year = 2026, month = 1, day = 28, type = TransactionType.EXPENSE, name = "test", amount = 1)),
+                goals = emptyList()
+            )
+        )
+        val invalid = valid.replace(",2026,2,28,", ",2026,2,30,")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            CsvBackupCodec.decode(invalid)
+        }
+    }
 
     @Test
     fun `round trips backup data with commas quotes and newlines`() {

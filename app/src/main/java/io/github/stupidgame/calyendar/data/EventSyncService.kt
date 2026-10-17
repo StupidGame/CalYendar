@@ -2,6 +2,7 @@ package io.github.stupidgame.calyendar.data
 
 import io.github.stupidgame.calyendar.utils.EventNotificationManager
 import java.time.LocalDate
+import java.time.ZoneId
 
 class EventSyncService(
     private val repository: CalYendarRepository,
@@ -15,14 +16,16 @@ class EventSyncService(
         event: Event,
         repeatType: EventRepeatType,
         repeatUntil: LocalDate?,
-        repeatDays: Set<Int>
+        repeatDays: Set<Int>,
+        zoneId: ZoneId = ZoneId.systemDefault()
     ) {
         upsertEvents(
             RecurringEventGenerator.generate(
                 baseEvent = event,
                 repeatType = repeatType,
                 repeatUntil = repeatUntil,
-                repeatDays = repeatDays
+                repeatDays = repeatDays,
+                zoneId = zoneId
             )
         )
     }
