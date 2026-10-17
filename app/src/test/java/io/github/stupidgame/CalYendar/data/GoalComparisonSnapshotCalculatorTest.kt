@@ -8,7 +8,35 @@ import org.junit.Test
 class GoalComparisonSnapshotCalculatorTest {
 
     @Test
-    fun `subtracts past goals when there is no upcoming goal`() {
+    fun `widget preserves income after consecutive deficit days`() {
+        val income =
+            Transaction(
+                year = 2026,
+                month = 2,
+                day = 1,
+                type = TransactionType.INCOME,
+                name = "income",
+                amount = 1_000
+            )
+        val snapshot =
+            GoalComparisonSnapshotCalculator.calculate(
+                transactionsUpToCurrentDate =
+                    listOf(
+                        income,
+                        income.copy(day = 2, type = TransactionType.EXPENSE, amount = 1_500),
+                        income.copy(day = 3, type = TransactionType.EXPENSE, amount = 200),
+                        income.copy(day = 4, amount = 300)
+                    ),
+                allGoals = emptyList(),
+                currentDate = LocalDate.of(2026, 3, 4)
+            )
+
+        assertEquals(300L, snapshot.currentBalance)
+        assertEquals(300L, snapshot.availableBalance)
+    }
+
+    @Test
+    fun `does not carry an unfunded past goal into later income`() {
         val transactions =
             listOf(
                 Transaction(
@@ -39,8 +67,8 @@ class GoalComparisonSnapshotCalculatorTest {
                 currentDate = LocalDate.of(2026, 3, 18)
             )
 
-        assertEquals(70_000L, snapshot.currentBalance)
-        assertEquals(70_000L, snapshot.availableBalance)
+        assertEquals(100_000L, snapshot.currentBalance)
+        assertEquals(100_000L, snapshot.availableBalance)
         assertNull(snapshot.nextGoal)
         assertNull(snapshot.nextGoalTargetAmount)
     }
